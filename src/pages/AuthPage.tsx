@@ -29,7 +29,8 @@ export default function AuthPage() {
 
       if (res.ok) {
         const data = await res.json();
-        login(data.user);
+        // 关键修复：等待 login(异步) 执行完毕，确保状态写入 localStorage 后再跳转
+        await login(data.user);
         navigate('/dashboard');
       } else {
         const error = await res.json();
@@ -38,7 +39,7 @@ export default function AuthPage() {
     } catch (err) {
       console.error(err);
       // 降级为本地模拟登录
-      login({
+      await login({
         id: Math.random().toString(36).substr(2, 9),
         name: isLogin ? 'Demo User' : name,
         email,
