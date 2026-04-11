@@ -12,16 +12,42 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const login = useStore((state) => state.login);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login({
-      id: Math.random().toString(36).substr(2, 9),
-      name: isLogin ? 'Demo User' : name,
-      avatar: '',
-      level: 'A1',
-      targetLanguage: targetLang,
-    });
-    navigate('/dashboard');
+    
+    try {
+      const endpoint = isLogin ? '/api/login' : '/api/register';
+      const body = isLogin 
+        ? { email }
+        : { name, email, targetLanguage: targetLang };
+
+      const res = await fetch(`http://localhost:3000${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        login(data.user);
+        navigate('/dashboard');
+      } else {
+        const error = await res.json();
+        alert(error.error || '操作失败，请重试');
+      }
+    } catch (err) {
+      console.error(err);
+      // 降级为本地模拟登录
+      login({
+        id: Math.random().toString(36).substr(2, 9),
+        name: isLogin ? 'Demo User' : name,
+        email,
+        avatar: '',
+        level: 'A1',
+        targetLanguage: targetLang,
+      });
+      navigate('/dashboard');
+    }
   };
 
   return (
