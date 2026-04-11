@@ -1,19 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Volume2, Mic, CheckCircle2, RotateCcw, ArrowRight, Lightbulb } from 'lucide-react';
+import { ChevronLeft, Volume2, Mic, CheckCircle2, RotateCcw, ArrowRight, Lightbulb, Search } from 'lucide-react';
 import { vocabularyData } from '../data/vocabulary';
 
 export default function StudyRoom() {
   const { courseId } = useParams();
   const [flipped, setFlipped] = useState(false);
   const [currentCard, setCurrentCard] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [isRecording, setIsRecording] = useState(false);
   const [speechResult, setSpeechResult] = useState('');
 
-  // 根据路由参数加载对应的词库，如果没有匹配到则默认加载中考词汇
-  const mockCards = courseId && vocabularyData[courseId] ? vocabularyData[courseId] : vocabularyData['zhongkao'];
+  // 获取当前词库
+  const fullVocabulary = useMemo(() => {
+    return courseId && vocabularyData[courseId] ? vocabularyData[courseId] : vocabularyData['zhongkao'];
+  }, [courseId]);
+
+  // 支持搜索过滤词汇
+  const mockCards = useMemo(() => {
+    if (!searchTerm) return fullVocabulary;
+    return fullVocabulary.filter(item => 
+      item.word.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      item.meaning.includes(searchTerm)
+    );
+  }, [fullVocabulary, searchTerm]);
+
+  // 如果搜索结果为空，或者当前卡片索引超出范围，重置索引
+  useEffect(() => {
+    if (mockCards.length === 0) return;
+    if (currentCard >= mockCards.length) {
+      setCurrentCard(0);
+      setFlipped(false);
+    }
+  }, [mockCards, currentCard]);
 
   // 添加键盘快捷键支持
   useEffect(() => {
@@ -89,7 +110,7 @@ export default function StudyRoom() {
 
   return (
     <div className="min-h-[calc(100vh-6rem)] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <header className="flex items-center justify-between mb-8">
+      <header className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <Link 
           to="/courses" 
           className="flex items-center gap-2 text-gray-500 hover:text-gray-900 font-bold transition-colors bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm hover:shadow-md"
@@ -97,21 +118,41 @@ export default function StudyRoom() {
           <ChevronLeft className="w-5 h-5" />
           返回课程大厅
         </Link>
+        
+        {/* 新增：搜索框 */}
+        <div className="relative flex-1 max-w-md mx-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder={`在 ${fullVocabulary.length} 个词汇中搜索...`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+          />
+        </div>
+
         <div className="flex items-center gap-4">
           <div className="text-sm font-bold text-gray-500">
-            进度: {currentCard + 1} / {mockCards.length}
+            进度: {mockCards.length > 0 ? currentCard + 1 : 0} / {mockCards.length}
           </div>
           <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
             <div 
               className="h-full bg-indigo-600 rounded-full transition-all duration-500" 
-              style={{ width: `${((currentCard + 1) / mockCards.length) * 100}%` }} 
+              style={{ width: mockCards.length > 0 ? `${((currentCard + 1) / mockCards.length) * 100}%` : '0%' }} 
             />
           </div>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full">
-        <div className="w-full aspect-[4/3] perspective-1000 relative max-w-lg mx-auto">
+        {mockCards.length === 0 ? (
+          <div className="text-center text-gray-500 mt-20">
+            <h2 className="text-2xl font-bold mb-4">找不到匹配的单词 😅</h2>
+            <p>请尝试换个搜索词，或者清空搜索框。</p>
+          </div>
+        ) : (
+          <>
+            <div className="w-full aspect-[4/3] perspective-1000 relative max-w-lg mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentCard}
@@ -214,6 +255,8 @@ export default function StudyRoom() {
             </button>
           </div>
         </div>
+          </>
+        )}
       </main>
     </div>
   );
