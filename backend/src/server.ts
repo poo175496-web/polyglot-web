@@ -12,7 +12,7 @@ app.use(express.json());
 
 // 初始化一个简单的本地数据库 (SQLite)
 // 在实际部署时，我们会把它换成云端数据库（如 MySQL 或 PostgreSQL）
-const db = new sqlite3.Database(':memory:', (err) => {
+const db = new sqlite3.Database('./database.sqlite', (err) => {
   if (err) {
     console.error('数据库连接失败:', err.message);
   } else {

@@ -45,24 +45,7 @@ export const useStore = create<StoreState>()(
         ]
       },
       login: async (user) => {
-        try {
-          if (user.email) {
-            const res = await fetch('https://polyglot-api.onrender.com/api/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: user.email })
-            });
-            if (res.ok) {
-              const data = await res.json();
-              set({ user: data.user });
-              return;
-            }
-          }
-          set({ user });
-        } catch (err) {
-          console.error('Login failed', err);
-          set({ user });
-        }
+        set({ user });
       },
       logout: () => set({ user: null })
     }),

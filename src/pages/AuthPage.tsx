@@ -38,16 +38,7 @@ export default function AuthPage() {
       }
     } catch (err) {
       console.error(err);
-      // 降级为本地模拟登录
-      await login({
-        id: Math.random().toString(36).substr(2, 9),
-        name: isLogin ? 'Demo User' : name,
-        email,
-        avatar: '',
-        level: 'A1',
-        targetLanguage: targetLang,
-      });
-      navigate('/dashboard');
+      alert('网络连接失败或服务器无响应，请稍后再试！');
     }
   };
 
