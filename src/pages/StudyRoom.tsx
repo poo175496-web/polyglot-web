@@ -121,11 +121,12 @@ export default function StudyRoom() {
         } else {
           // 全部听写正确，本单元完成！调用后端解锁下一单元
           if (activeGroupId !== null && !searchTerm) {
-            await updateProgress(courseId || '', activeGroupId);
+            // 这里不要 await，让后端请求在后台慢慢跑，前端直接跳到恭喜页面
+            updateProgress(courseId || '', activeGroupId).catch(console.error);
           }
           setStudyMode('finished');
         }
-      }, 1000);
+      }, 400); // 答对后只停留 0.4 秒，不用等 1 秒
     } else {
       setDictationStatus('error');
       // 拼写错误时可以再次播放读音
@@ -185,7 +186,7 @@ export default function StudyRoom() {
   // 渲染：单元列表视图
   if (studyMode === 'list' && !searchTerm) {
     return (
-      <div className="min-h-[calc(100vh-6rem)] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="min-h-[calc(100vh-6rem)] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
         <header className="flex items-center justify-between mb-12 flex-wrap gap-4">
           <Link 
             to="/courses" 
@@ -273,7 +274,7 @@ export default function StudyRoom() {
   // 渲染：完成恭喜视图
   if (studyMode === 'finished') {
     return (
-      <div className="min-h-[calc(100vh-6rem)] flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+      <div className="min-h-[calc(100vh-6rem)] flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
         <div className="w-full max-w-lg mx-auto bg-white p-12 rounded-[2.5rem] shadow-2xl text-center border-2 border-emerald-100">
           <PartyPopper className="w-24 h-24 text-emerald-500 mx-auto mb-6 animate-bounce" />
           <h2 className="text-4xl font-black text-gray-900 mb-4">太棒了！</h2>
@@ -304,7 +305,7 @@ export default function StudyRoom() {
   // 渲染：听写测验视图
   if (studyMode === 'dictation') {
     return (
-      <div className="min-h-[calc(100vh-6rem)] flex flex-col items-center justify-center animate-in slide-in-from-right duration-500">
+      <div className="min-h-[calc(100vh-6rem)] flex flex-col items-center justify-center animate-in slide-in-from-right duration-300">
         <div className="w-full max-w-lg mx-auto bg-white p-12 rounded-[2.5rem] shadow-2xl text-center border-2 border-indigo-100">
           <div className="flex justify-between items-center mb-8">
             <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-sm font-bold tracking-widest">
@@ -353,7 +354,7 @@ export default function StudyRoom() {
 
   // 渲染：翻卡片学习视图 (flashcard)
   return (
-    <div className="min-h-[calc(100vh-6rem)] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="min-h-[calc(100vh-6rem)] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
       <header className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <button 
           onClick={() => {
@@ -413,7 +414,7 @@ export default function StudyRoom() {
                   key={currentCard}
                   className="w-full h-full relative preserve-3d cursor-pointer"
                   animate={{ rotateY: flipped ? 180 : 0 }}
-                  transition={{ duration: 0.6, type: 'spring', stiffness: 260, damping: 20 }}
+                  transition={{ duration: 0.3, type: 'spring', stiffness: 400, damping: 25 }}
                   onClick={handleFlip}
                 >
                   {/* Front */}
