@@ -8,8 +8,6 @@ const mockCourses = [
   { id: 'gaokao', title: '高考高频词汇全覆盖', lang: 'en', level: '高考', rating: 4.9, students: 38500, image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80', color: 'indigo' },
   { id: 'ielts', title: '雅思必背8000词', lang: 'en', level: 'IELTS', rating: 4.7, students: 23000, image: 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=500&q=80', color: 'emerald' },
   { id: 'toefl', title: '托福学术词汇精讲', lang: 'en', level: 'TOEFL', rating: 4.9, students: 15800, image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&q=80', color: 'rose' },
-  { id: 'ja-1', title: '五十音图速记', lang: 'ja', level: 'N5', rating: 4.7, students: 2300, image: 'https://images.unsplash.com/photo-1528310901416-a5e4c507101e?w=500&q=80', color: 'pink' },
-  { id: 'ko-1', title: '看韩剧学口语', lang: 'ko', level: 'TOPIK 2', rating: 4.9, students: 1500, image: 'https://images.unsplash.com/photo-1573164713988-8665fc963095?w=500&q=80', color: 'amber' },
 ];
 
 export default function CourseList() {
