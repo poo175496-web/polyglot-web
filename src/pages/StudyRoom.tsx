@@ -1,28 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Volume2, Mic, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Volume2, Mic, CheckCircle2, RotateCcw, ArrowRight, Lightbulb } from 'lucide-react';
+import { vocabularyData } from '../data/vocabulary';
 
 export default function StudyRoom() {
   const { courseId } = useParams();
   const [flipped, setFlipped] = useState(false);
   const [currentCard, setCurrentCard] = useState(0);
-
+  
   const [isRecording, setIsRecording] = useState(false);
   const [speechResult, setSpeechResult] = useState('');
 
-  const mockCards = [
-    { word: 'Accomplish', phonetic: '/əˈkʌmplɪʃ/', meaning: '完成；实现；达到', root: 'ac- (加强语气) + complish (完成) ➔ 强调去完成', example: 'We have accomplished a lot today.' },
-    { word: 'Persistent', phonetic: '/pərˈsɪstənt/', meaning: '坚持不懈的；执着的', root: 'per- (始终) + sist (站立) + -ent (形容词后缀) ➔ 始终站立 ➔ 坚持的', example: 'She has been persistent in her studies.' },
-    { word: 'Innovative', phonetic: '/ɪˈnɒvətɪv/', meaning: '创新的；革新的', root: 'in- (进入) + nov (新) + -ative (形容词后缀) ➔ 引入新的事物 ➔ 创新的', example: 'They came up with an innovative solution.' },
-    { word: 'Enthusiastic', phonetic: '/ɪnˌθjuːziˈæstɪk/', meaning: '热情的；热心的', root: 'en- (在...内) + theos (神) ➔ 神灵附体 ➔ 充满热情的', example: 'The crowd was very enthusiastic.' },
-    { word: 'Resilient', phonetic: '/pərˈzɪliənt/', meaning: '有弹性的；能恢复活力的', root: 're- (回) + salire (跳) ➔ 弹回 ➔ 恢复力强的', example: 'She is a resilient girl who bounces back quickly.' },
-    { word: 'Meticulous', phonetic: '/mɪˈtɪkjələs/', meaning: '一丝不苟的；精确的', root: 'metus (恐惧) ➔ 因害怕出错而极度小心 ➔ 一丝不苟的', example: 'He is meticulous in his work.' },
-    { word: 'Spontaneous', phonetic: '/spɒnˈteɪniəs/', meaning: '自发的；自然的', root: 'sponte (自愿地) ➔ 发自内心的 ➔ 自发的', example: 'We took a spontaneous trip to the beach.' },
-    { word: 'Versatile', phonetic: '/ˈvɜːrsətl/', meaning: '多才多艺的；多用途的', root: 'vers (转) ➔ 能转向多种用途的 ➔ 多才多艺的', example: 'He is a versatile actor who can play any role.' },
-    { word: 'Tenacious', phonetic: '/tɪˈneɪʃəs/', meaning: '顽强的；坚韧的', root: 'ten (握住) ➔ 紧紧抓住不放 ➔ 顽强的', example: 'She is known for her tenacious spirit.' },
-    { word: 'Pragmatic', phonetic: '/præɡˈmætɪk/', meaning: '务实的；实用的', root: 'pragma (行为、事实) ➔ 注重实际效果的 ➔ 务实的', example: 'We need a pragmatic approach to solve this problem.' },
-  ];
+  // 根据路由参数加载对应的词库，如果没有匹配到则默认加载中考词汇
+  const mockCards = courseId && vocabularyData[courseId] ? vocabularyData[courseId] : vocabularyData['zhongkao'];
+
+  // 添加键盘快捷键支持
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleFlip();
+      } else if (e.code === 'ArrowRight' && flipped && currentCard < mockCards.length - 1) {
+        handleNext();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [flipped, currentCard, mockCards.length]);
 
   const handleNext = () => {
     setFlipped(false);
@@ -106,7 +111,7 @@ export default function StudyRoom() {
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto w-full">
-        <div className="w-full aspect-[4/3] perspective-1000 relative">
+        <div className="w-full aspect-[4/3] perspective-1000 relative max-w-lg mx-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentCard}
@@ -116,40 +121,46 @@ export default function StudyRoom() {
               onClick={handleFlip}
             >
               {/* Front */}
-              <div className="absolute inset-0 backface-hidden bg-white border-2 border-gray-100 rounded-3xl shadow-xl flex flex-col items-center justify-center p-12 text-center hover:border-indigo-200 transition-colors">
+              <div className="absolute inset-0 backface-hidden bg-white border-2 border-gray-100 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center p-12 text-center hover:border-indigo-300 transition-all hover:shadow-indigo-100">
+                <div className="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-indigo-50/50 to-transparent pointer-events-none" />
                 <button 
                   onClick={(e) => playAudio(mockCards[currentCard].word, e)}
-                  className="absolute top-6 right-6 p-3 bg-gray-50 rounded-full text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors z-10"
+                  className="absolute top-6 right-6 p-4 bg-white shadow-sm border border-gray-100 rounded-full text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 hover:scale-110 transition-all z-10"
                 >
                   <Volume2 className="w-6 h-6" />
                 </button>
-                <h2 className="text-6xl font-black text-gray-900 mb-4 tracking-tight">
+                <h2 className="text-5xl sm:text-6xl font-black text-gray-900 mb-6 tracking-tight font-serif">
                   {mockCards[currentCard].word}
                 </h2>
-                <p className="text-xl text-gray-400 font-mono tracking-widest">
+                <p className="text-2xl text-indigo-400 font-mono tracking-widest bg-indigo-50 px-6 py-2 rounded-2xl">
                   {mockCards[currentCard].phonetic}
                 </p>
-                <div className="absolute bottom-8 left-0 right-0 text-gray-400 font-medium flex items-center justify-center gap-2">
-                  <RotateCcw className="w-4 h-4" />
-                  点击卡片翻转查看释义
+                <div className="absolute bottom-8 left-0 right-0 text-gray-400 font-bold flex items-center justify-center gap-2 animate-pulse">
+                  <RotateCcw className="w-5 h-5" />
+                  点击卡片或按空格键翻转
                 </div>
               </div>
 
               {/* Back */}
-              <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 text-white rounded-3xl shadow-xl flex flex-col items-center justify-center p-12 text-center [transform:rotateY(180deg)]">
-                <h3 className="text-4xl font-black mb-6">
+              <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center p-10 sm:p-12 text-center [transform:rotateY(180deg)] overflow-hidden">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay" />
+                
+                <h3 className="text-4xl sm:text-5xl font-black mb-8 z-10">
                   {mockCards[currentCard].meaning}
                 </h3>
                 
-                <div className="bg-white/10 px-6 py-3 rounded-2xl mb-6 backdrop-blur-sm border border-white/20">
-                  <p className="text-sm text-indigo-200 font-bold mb-1 tracking-wider uppercase">词根词缀</p>
+                <div className="bg-white/10 px-6 py-4 rounded-3xl mb-8 backdrop-blur-md border border-white/20 w-full z-10 shadow-inner">
+                  <div className="flex items-center justify-center gap-2 mb-2 text-indigo-200">
+                    <Lightbulb className="w-5 h-5" />
+                    <p className="text-sm font-bold tracking-wider uppercase">词根词缀记忆法</p>
+                  </div>
                   <p className="text-lg text-white font-medium">
                     {mockCards[currentCard].root}
                   </p>
                 </div>
 
-                <div className="w-16 h-1 bg-white/20 rounded-full mb-6" />
-                <p className="text-xl text-indigo-100 font-medium italic leading-relaxed">
+                <div className="w-24 h-1 bg-white/20 rounded-full mb-8 z-10" />
+                <p className="text-xl sm:text-2xl text-indigo-100 font-medium italic leading-relaxed z-10">
                   "{mockCards[currentCard].example}"
                 </p>
               </div>

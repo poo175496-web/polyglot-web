@@ -4,12 +4,12 @@ import { Search, Filter, Book, Clock, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const mockCourses = [
-  { id: 'en-1', title: '零基础英语入门', lang: 'en', level: 'A1', rating: 4.8, students: 1205, image: 'https://images.unsplash.com/photo-1546410531-bea5aadcb8ce?w=500&q=80', color: 'indigo' },
-  { id: 'en-2', title: '商务职场沟通', lang: 'en', level: 'B2', rating: 4.9, students: 850, image: 'https://images.unsplash.com/photo-1573164713988-8665fc963095?w=500&q=80', color: 'blue' },
-  { id: 'ja-1', title: '五十音图速记', lang: 'ja', level: 'N5', rating: 4.7, students: 2300, image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&q=80', color: 'pink' },
-  { id: 'ko-1', title: '看韩剧学口语', lang: 'ko', level: 'TOPIK 2', rating: 4.9, students: 1500, image: 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=500&q=80', color: 'emerald' },
-  { id: 'en-3', title: '雅思词汇冲刺', lang: 'en', level: 'C1', rating: 4.6, students: 620, image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80', color: 'violet' },
-  { id: 'ja-2', title: '进阶阅读解析', lang: 'ja', level: 'N2', rating: 4.8, students: 410, image: 'https://images.unsplash.com/photo-1528310901416-a5e4c507101e?w=500&q=80', color: 'rose' },
+  { id: 'zhongkao', title: '中考核心词汇冲刺', lang: 'en', level: '中考', rating: 4.8, students: 12500, image: 'https://images.unsplash.com/photo-1546410531-bea5aadcb8ce?w=500&q=80', color: 'blue' },
+  { id: 'gaokao', title: '高考高频词汇全覆盖', lang: 'en', level: '高考', rating: 4.9, students: 38500, image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=500&q=80', color: 'indigo' },
+  { id: 'ielts', title: '雅思必背8000词', lang: 'en', level: 'IELTS', rating: 4.7, students: 23000, image: 'https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=500&q=80', color: 'emerald' },
+  { id: 'toefl', title: '托福学术词汇精讲', lang: 'en', level: 'TOEFL', rating: 4.9, students: 15800, image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=500&q=80', color: 'rose' },
+  { id: 'ja-1', title: '五十音图速记', lang: 'ja', level: 'N5', rating: 4.7, students: 2300, image: 'https://images.unsplash.com/photo-1528310901416-a5e4c507101e?w=500&q=80', color: 'pink' },
+  { id: 'ko-1', title: '看韩剧学口语', lang: 'ko', level: 'TOPIK 2', rating: 4.9, students: 1500, image: 'https://images.unsplash.com/photo-1573164713988-8665fc963095?w=500&q=80', color: 'amber' },
 ];
 
 export default function CourseList() {
