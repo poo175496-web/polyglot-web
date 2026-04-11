@@ -30,6 +30,16 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
       // 插入一条测试数据
       db.run(`INSERT OR IGNORE INTO users (name, email, targetLanguage) VALUES ('测试亲戚', 'test@family.com', 'en')`);
     });
+
+    // 创建用户学习进度表
+    db.run(`
+      CREATE TABLE IF NOT EXISTS user_progress (
+        user_id INTEGER,
+        course_id TEXT,
+        unlocked_unit INTEGER DEFAULT 0,
+        PRIMARY KEY (user_id, course_id)
+      )
+    `);
   }
 });
 
@@ -37,6 +47,19 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: '服务器正常运行中！' });
 });
+
+// 辅助函数：获取用户进度
+const getUserProgress = (userId: number, callback: (progress: Record<string, number>) => void) => {
+  db.all(`SELECT course_id, unlocked_unit FROM user_progress WHERE user_id = ?`, [userId], (err, rows) => {
+    const progress: Record<string, number> = {};
+    if (!err && rows) {
+      rows.forEach((row: any) => {
+        progress[row.course_id] = row.unlocked_unit;
+      });
+    }
+    callback(progress);
+  });
+};
 
 // 注册接口：您的亲戚朋友可以通过这个接口注册账号
 app.post('/api/register', (req, res) => {
@@ -53,7 +76,7 @@ app.post('/api/register', (req, res) => {
     }
     res.json({ 
       message: '注册成功！',
-      user: { id: this.lastID, name, email, targetLanguage, level: 'A1' } 
+      user: { id: this.lastID, name, email, targetLanguage, level: 'A1', progress: {} } 
     });
   });
 });
@@ -62,14 +85,45 @@ app.post('/api/register', (req, res) => {
 app.post('/api/login', (req, res) => {
   const { email } = req.body;
   
-  db.get(`SELECT * FROM users WHERE email = ?`, [email], (err, row) => {
+  db.get(`SELECT * FROM users WHERE email = ?`, [email], (err, row: any) => {
     if (err) {
       return res.status(500).json({ error: '服务器错误' });
     }
     if (!row) {
       return res.status(404).json({ error: '找不到该账号，请先注册' });
     }
-    res.json({ message: '登录成功', user: row });
+    
+    // 登录成功时，同时查出该用户解锁的单元进度
+    getUserProgress(row.id, (progress) => {
+      row.progress = progress;
+      res.json({ message: '登录成功', user: row });
+    });
+  });
+});
+
+// 更新学习进度接口：每次学完听写提交后调用
+app.post('/api/progress', (req, res) => {
+  const { userId, courseId, completedUnit } = req.body;
+  const nextUnlock = completedUnit + 1; // 解锁下一单元
+
+  db.get(`SELECT unlocked_unit FROM user_progress WHERE user_id = ? AND course_id = ?`, [userId, courseId], (err, row: any) => {
+    if (err) return res.status(500).json({ error: '数据库错误' });
+
+    if (row) {
+      // 只有在完成的新单元 > 已解锁进度时才更新（防止重复学习旧单元导致进度回退）
+      if (nextUnlock > row.unlocked_unit) {
+        db.run(`UPDATE user_progress SET unlocked_unit = ? WHERE user_id = ? AND course_id = ?`, [nextUnlock, userId, courseId], () => {
+          res.json({ success: true, unlocked_unit: nextUnlock });
+        });
+      } else {
+        res.json({ success: true, unlocked_unit: row.unlocked_unit });
+      }
+    } else {
+      // 第一次完成该课程的第0单元
+      db.run(`INSERT INTO user_progress (user_id, course_id, unlocked_unit) VALUES (?, ?, ?)`, [userId, courseId, nextUnlock], () => {
+        res.json({ success: true, unlocked_unit: nextUnlock });
+      });
+    }
   });
 });
 
