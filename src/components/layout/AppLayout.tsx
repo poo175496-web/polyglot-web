@@ -1,18 +1,20 @@
 import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import { useStore } from '@/store/useStore';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { getRouteAccessDecision } from '@/lib/access';
 
 interface AppLayoutProps {
   children: ReactNode;
+  requireAdmin?: boolean;
 }
 
-export default function AppLayout({ children }: AppLayoutProps) {
+export default function AppLayout({ children, requireAdmin = false }: AppLayoutProps) {
   const user = useStore((state) => state.user);
-  const location = useLocation();
+  const decision = getRouteAccessDecision(user, { requireAuth: true, requireAdmin });
 
-  if (!user && location.pathname !== '/' && location.pathname !== '/login') {
-    return <Navigate to="/login" replace />;
+  if (!decision.allowed) {
+    return <Navigate to={decision.redirectTo} replace />;
   }
 
   return (

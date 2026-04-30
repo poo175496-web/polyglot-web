@@ -1,53 +1,107 @@
-# 部署指南：如何将多语种学习平台部署到云端
+# 部署指南：把 Polyglot 正式上线
 
-如果您想要让您的亲戚朋友也能访问这个项目，您可以将代码部署到云端。目前有许多免费的云服务平台可供选择。
+这份项目现在已经是前后端分离结构：
+- 前端：Vite + React，部署到 **Vercel**
+- 后端：Node.js + Express + SQLite，部署到 **Render**
 
-## 前端部署 (Vercel)
+## 上线前确认
 
-前端页面我们可以部署在 **Vercel** 上，它对个人项目是永久免费的，而且在全球访问速度都非常快。
+当前仓库根目录就是前端项目目录，所以：
+- Vercel 的 **Root Directory** 不要再填 `polyglot`
+- Render 的 **Root Directory** 应该填 `backend`
 
-### 准备工作
-1. 将您的代码上传到 GitHub。
-2. 注册并登录 [Vercel](https://vercel.com)。
+另外，项目新增了真实登录和管理员后台，所以上线前必须配置环境变量。
 
-### 部署步骤
-1. 在 Vercel 后台点击 **Add New...** -> **Project**。
-2. 关联您的 GitHub 账号，并选择您刚才上传的 `polyglot` 仓库。
-3. 如果 Vercel 询问 `Framework Preset`，它会自动识别为 `Vite`。
-4. **重要设置**：
-   - **Root Directory**：填写 `polyglot`。因为我们的前端代码是在 `polyglot` 文件夹下。
-   - **Build Command**：默认的 `npm run build` 即可。
-   - **Output Directory**：默认的 `dist` 即可。
-5. 点击 **Deploy**。稍等一两分钟，Vercel 就会为您生成一个可以在微信里直接访问的公网链接（例如：`polyglot-xxxx.vercel.app`）。
+## 前端部署到 Vercel
 
-## 后端部署 (Render)
+### 第一次创建项目
+1. 登录 [Vercel](https://vercel.com)。
+2. 点击 **Add New** -> **Project**。
+3. 选择 GitHub 仓库 `polyglot-web`。
+4. 保持默认识别为 `Vite`。
+5. 关键配置如下：
+   - **Root Directory**：留空，使用仓库根目录
+   - **Build Command**：`npm run build`
+   - **Output Directory**：`dist`
 
-后端包含 Node.js 代码和数据库。我们可以部署在 **Render** 上，它的 Web Services 提供免费额度（每月有免费运行时长，对于五六个人用完全足够）。
+### 前端环境变量
+在 Vercel 项目的 **Settings** -> **Environment Variables** 中新增：
 
-### 准备工作
-1. 您需要把刚刚写好的后台代码也推送到 GitHub 仓库（通常和前端放在同一个仓库的 `polyglot/backend` 目录下）。
-2. 注册并登录 [Render](https://render.com)。
+```bash
+VITE_API_BASE_URL=https://你的-render-后端地址.onrender.com
+```
 
-### 部署步骤
-1. 在 Render 后台点击 **New** -> **Web Service**。
-2. 选择 **Build and deploy from a Git repository**，关联您的 GitHub 并选择仓库。
-3. **重要设置**：
-   - **Name**：给服务起个名字，比如 `polyglot-api`。
-   - **Root Directory**：填写 `polyglot/backend`。
-   - **Environment**：选择 `Node`。
-   - **Build Command**：填写 `npm install && npm run build`。
-   - **Start Command**：填写 `npm start`。
-4. 选择 **Free** 套餐。
-5. 点击 **Create Web Service**。
-6. 部署成功后，Render 会给您一个后端 API 地址（例如：`https://polyglot-api-xxxx.onrender.com`）。
+示例文件见：
+- [.env.example](file:///Users/Zhuanz/Desktop/trae/polyglot/.env.example)
 
-## 关联前后端
+### 发布
+1. 保存环境变量后点击部署。
+2. 后续只要你推送 GitHub，Vercel 会自动重新部署。
 
-现在前端和后端都部署在云端了，但是它们还互相不认识。您需要告诉前端去哪里请求后台数据：
+## 后端部署到 Render
 
-1. 在您的前端代码中（如果有请求后端的地方），将原来写的 `http://localhost:3000` 替换成 Render 给您的后台 API 地址 `https://polyglot-api-xxxx.onrender.com`。
-2. 修改完代码后推送到 GitHub，Vercel 会自动为您重新部署前端。
+### 第一次创建服务
+1. 登录 [Render](https://render.com)。
+2. 点击 **New** -> **Web Service**。
+3. 连接 GitHub 仓库 `polyglot-web`。
+4. 关键配置如下：
+   - **Root Directory**：`backend`
+   - **Environment**：`Node`
+   - **Build Command**：`npm install && npm run build`
+   - **Start Command**：`npm start`
+   - **Plan**：`Free`
 
-> **提示：** SQLite 是一个本地文件数据库。在 Render 的免费实例中，每次服务器重启（比如一段时间没人访问后休眠唤醒），数据库里的数据可能会被清空。对于真正需要永久保存数据的项目，建议在 Render 上额外创建一个免费的 **PostgreSQL** 数据库，并修改 Node.js 代码连接到该数据库。
+### 后端环境变量
+在 Render 的环境变量中新增：
 
-如果您在这个过程中遇到任何问题，例如不知道怎么用 GitHub，或者部署时遇到报错，随时问我！
+```bash
+AUTH_SECRET=换成一段很长的随机字符串
+ADMIN_EMAIL=你的管理员邮箱
+```
+
+说明：
+- `AUTH_SECRET`：用于登录令牌签名，必须设置
+- `ADMIN_EMAIL`：这个邮箱登录后会被识别为管理员，可进入 `/admin`
+
+示例文件见：
+- [backend/.env.example](file:///Users/Zhuanz/Desktop/trae/polyglot/backend/.env.example)
+
+### Render 蓝图配置
+如果你想后面更方便复用，可以直接使用仓库里的 Render 配置：
+- [render.yaml](file:///Users/Zhuanz/Desktop/trae/polyglot/render.yaml)
+
+## 管理员登录说明
+
+项目已经支持后台管理页：
+- 管理地址：`/admin`
+- 只有管理员账号能访问
+
+管理员来源有两种：
+1. 邮箱与 `ADMIN_EMAIL` 一致
+2. 当前线上还没有真实管理员时，首个真实用户会自动补成管理员
+
+## 老账号兼容
+
+如果你之前线上已经有“只有邮箱、没有密码”的旧账号：
+- 第一次登录时直接输入一个新密码
+- 系统会自动把这个旧账号升级成密码账号
+
+## 上线后自检
+
+请按这个顺序检查：
+1. 打开前端首页能正常访问
+2. 注册一个新用户
+3. 用新账号重新登录
+4. 学完一个单元后确认进度可同步
+5. 用管理员邮箱登录后访问 `/admin`
+6. 刷新页面后确认仍保持登录
+
+## 重要提醒
+
+- 现在后端仍然用的是 SQLite 文件数据库
+- Render 免费服务休眠或重建后，数据库仍然可能丢失
+- 如果你要长期正式使用，下一步应该把 SQLite 换成 PostgreSQL
+
+如果你现在要我继续，我下一步可以直接帮你做两件事中的一种：
+- 帮你把本地代码提交并推到 GitHub
+- 帮你逐项核对 Vercel 和 Render 后台该怎么填

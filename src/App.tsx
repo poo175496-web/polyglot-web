@@ -6,6 +6,7 @@ import Dashboard from "@/pages/Dashboard";
 import CourseList from "@/pages/CourseList";
 import StudyRoom from "@/pages/StudyRoom";
 import Community from "@/pages/Community";
+import AdminPage from "@/pages/AdminPage";
 
 export default function App() {
   return (
@@ -44,6 +45,14 @@ export default function App() {
           element={
             <AppLayout>
               <Community />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AppLayout requireAdmin>
+              <AdminPage />
             </AppLayout>
           }
         />

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useStore } from '@/store/useStore';
+import { fetchJson } from '@/lib/api';
+import { useStore, type User } from '@/store/useStore';
+import { validatePassword } from '@/lib/auth';
 import { motion } from 'framer-motion';
 import { Globe } from 'lucide-react';
 
@@ -8,37 +10,65 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [targetLang, setTargetLang] = useState('en');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
   const navigate = useNavigate();
   const login = useStore((state) => state.login);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (isSubmitting) return;
+
+    setFormError('');
+    const trimmedEmail = email.trim();
+    const trimmedName = name.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail || !trimmedPassword) {
+      setFormError('邮箱和密码不能为空');
+      return;
+    }
+
+    if (!isLogin) {
+      const passwordCheck = validatePassword(trimmedPassword);
+      if (!passwordCheck.valid) {
+        setFormError(passwordCheck.message);
+        return;
+      }
+
+      if (trimmedPassword !== confirmPassword.trim()) {
+        setFormError('两次输入的密码不一致');
+        return;
+      }
+      if (!trimmedName) {
+        setFormError('昵称不能为空');
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
     try {
       const endpoint = isLogin ? '/api/login' : '/api/register';
       const body = isLogin 
-        ? { email }
-        : { name, email, targetLanguage: targetLang };
+        ? { email: trimmedEmail, password: trimmedPassword }
+        : { name: trimmedName, email: trimmedEmail, password: trimmedPassword, targetLanguage: targetLang };
 
-      const res = await fetch(`https://polyglot-web-g2pa.onrender.com${endpoint}`, {
+      const data = await fetchJson<{ user: User; token: string }>(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        // 关键修复：等待 login(异步) 执行完毕，确保状态写入 localStorage 后再跳转
-        await login(data.user);
-        navigate('/dashboard');
-      } else {
-        const error = await res.json();
-        alert(error.error || '操作失败，请重试');
-      }
+      await login({ user: data.user, token: data.token });
+      navigate('/dashboard');
     } catch (err) {
       console.error(err);
-      alert('网络连接失败或服务器无响应，请稍后再试！');
+      setFormError(err instanceof Error ? err.message : '网络连接失败或服务器无响应，请稍后再试！');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -73,6 +103,7 @@ export default function AuthPage() {
                     type="text"
                     required
                     value={name}
+                    disabled={isSubmitting}
                     onChange={(e) => setName(e.target.value)}
                     className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
                   />
@@ -91,11 +122,53 @@ export default function AuthPage() {
                   type="email"
                   required
                   value={email}
+                  disabled={isSubmitting}
                   onChange={(e) => setEmail(e.target.value)}
                   className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
                 />
               </div>
             </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                密码
+              </label>
+              <div className="mt-1">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={password}
+                  disabled={isSubmitting}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
+                />
+              </div>
+              {!isLogin && (
+                <p className="mt-2 text-xs text-gray-500">密码至少 8 位，并同时包含字母和数字。</p>
+              )}
+            </div>
+
+            {!isLogin && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                  确认密码
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    disabled={isSubmitting}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
+                  />
+                </div>
+              </div>
+            )}
 
             {!isLogin && (
               <div>
@@ -106,6 +179,7 @@ export default function AuthPage() {
                   id="language"
                   name="language"
                   value={targetLang}
+                  disabled={isSubmitting}
                   onChange={(e) => setTargetLang(e.target.value)}
                   className="mt-1 block w-full pl-3 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-xl transition-all"
                 >
@@ -116,12 +190,19 @@ export default function AuthPage() {
               </div>
             )}
 
+            {formError && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {formError}
+              </div>
+            )}
+
             <div>
               <button
                 type="submit"
+                disabled={isSubmitting}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all hover:shadow-lg"
               >
-                {isLogin ? '立即登录' : '注册账号'}
+                {isSubmitting ? '提交中...' : isLogin ? '立即登录' : '注册账号'}
               </button>
             </div>
           </form>
@@ -140,7 +221,14 @@ export default function AuthPage() {
 
             <div className="mt-6">
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setFormError('');
+                  setPassword('');
+                  setConfirmPassword('');
+                }}
                 className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all"
               >
                 {isLogin ? '切换到注册' : '切换到登录'}

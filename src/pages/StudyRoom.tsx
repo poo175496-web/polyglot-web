@@ -1,9 +1,32 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Volume2, Mic, CheckCircle2, RotateCcw, Search, Lightbulb, BookOpen, Lock, PartyPopper } from 'lucide-react';
+import { ChevronLeft, Volume2, Mic, RotateCcw, Search, Lightbulb, BookOpen, Lock, PartyPopper } from 'lucide-react';
 import { vocabularyData, WordItem } from '../data/vocabulary';
 import { useStore } from '../store/useStore';
+
+interface SpeechRecognitionResultEvent {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+interface BrowserSpeechRecognition {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onstart: (() => void) | null;
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+}
+
+interface BrowserSpeechRecognitionConstructor {
+  new (): BrowserSpeechRecognition;
+}
 
 export default function StudyRoom() {
   const { courseId } = useParams();
@@ -20,9 +43,13 @@ export default function StudyRoom() {
   const [dictationInput, setDictationInput] = useState('');
   const [dictationStatus, setDictationStatus] = useState<'idle' | 'error' | 'success'>('idle');
   const dictationInputRef = useRef<HTMLInputElement>(null);
+  const dictationTimeoutRef = useRef<number | null>(null);
+  const focusTimeoutRef = useRef<number | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [speechResult, setSpeechResult] = useState('');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle');
+  const [syncMessage, setSyncMessage] = useState('');
 
   // 获取用户在该课程的解锁进度（默认第 0 单元）
   const unlockedUnit = user?.progress?.[courseId || ''] || 0;
@@ -66,7 +93,137 @@ export default function StudyRoom() {
     setSpeechResult('');
     setDictationInput('');
     setDictationStatus('idle');
+    setSyncStatus('idle');
+    setSyncMessage('');
   }, [activeGroupId, searchTerm, studyMode]);
+
+  const handleNextFlashcard = useCallback(() => {
+    setFlipped(false);
+    setSpeechResult('');
+    if (currentCard < activeCards.length - 1) {
+      setCurrentCard(prev => prev + 1);
+    } else {
+      // 学完本组，进入听写模式
+      setStudyMode('dictation');
+    }
+  }, [currentCard, activeCards.length]);
+
+  const syncUnitProgress = useCallback(async () => {
+    if (activeGroupId === null || searchTerm) {
+      setSyncStatus('idle');
+      setSyncMessage('');
+      return;
+    }
+
+    setSyncStatus('syncing');
+    setSyncMessage('正在同步学习进度到云端...');
+    const result = await updateProgress(courseId || '', activeGroupId);
+
+    if (result.synced) {
+      setSyncStatus('success');
+      if (result.unlockedUnit + 1 < groups.length) {
+        setSyncMessage(`云端同步成功，已解锁 Unit ${result.unlockedUnit + 1}。`);
+      } else {
+        setSyncMessage('云端同步成功，当前课程单元已全部解锁。');
+      }
+      return;
+    }
+
+    setSyncStatus('error');
+    setSyncMessage(result.error || '进度同步失败，请稍后重试。');
+  }, [activeGroupId, searchTerm, updateProgress, courseId, groups.length]);
+
+  const handleFlip = useCallback(() => {
+    setFlipped(prev => !prev);
+  }, []);
+
+  const playAudio = useCallback((text: string, e: React.MouseEvent | null) => {
+    if (e) e.stopPropagation();
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      setSpeechResult('当前浏览器不支持网页发音，请尝试使用较新的 Chrome。');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    utterance.onerror = () => {
+      setSpeechResult('发音播放失败，请稍后再试。');
+    };
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const handleDictationSubmit = useCallback(async () => {
+    if (!dictationInput.trim() || !activeCards[currentCard]) return;
+    
+    const targetWord = activeCards[currentCard].word.toLowerCase();
+    if (dictationInput.trim().toLowerCase() === targetWord) {
+      setDictationStatus('success');
+      if (dictationTimeoutRef.current) {
+        window.clearTimeout(dictationTimeoutRef.current);
+      }
+      dictationTimeoutRef.current = window.setTimeout(async () => {
+        if (currentCard < activeCards.length - 1) {
+          setCurrentCard(prev => prev + 1);
+          setDictationInput('');
+          setDictationStatus('idle');
+        } else {
+          setStudyMode('finished');
+          void syncUnitProgress();
+        }
+      }, 250);
+    } else {
+      setDictationStatus('error');
+      // 拼写错误时可以再次播放读音
+      playAudio(activeCards[currentCard].word, null);
+    }
+  }, [activeCards, currentCard, dictationInput, playAudio, syncUnitProgress]);
+
+  const handleRecord = () => {
+    if (!activeCards[currentCard] || isRecording) return;
+
+    const speechWindow = window as Window & {
+      SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+      webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    };
+    const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("抱歉，您的浏览器不支持语音识别功能，请尝试使用 Chrome 浏览器。");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+      setSpeechResult('正在倾听...');
+    };
+
+    recognition.onresult = (event: SpeechRecognitionResultEvent) => {
+      const transcript = event.results[0][0].transcript.toLowerCase();
+      const targetWord = activeCards[currentCard].word.toLowerCase();
+      
+      if (transcript.includes(targetWord) || targetWord.includes(transcript)) {
+        setSpeechResult('🎉 发音非常标准！(得分: 95)');
+      } else {
+        setSpeechResult(`🤔 识别结果: "${transcript}"，再试一次吧！`);
+      }
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      setSpeechResult(`❌ 录音失败: ${event.error}`);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognition.start();
+  };
 
   // 添加键盘快捷键支持
   useEffect(() => {
@@ -84,104 +241,41 @@ export default function StudyRoom() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flipped, currentCard, activeCards.length, studyMode]);
+  }, [activeCards.length, currentCard, flipped, handleFlip, handleNextFlashcard, studyMode]);
 
   // 听写模式自动播放发音和聚焦
   useEffect(() => {
     if (studyMode === 'dictation' && activeCards[currentCard]) {
       playAudio(activeCards[currentCard].word, null);
-      setTimeout(() => {
+      if (focusTimeoutRef.current) {
+        window.clearTimeout(focusTimeoutRef.current);
+      }
+      focusTimeoutRef.current = window.setTimeout(() => {
         dictationInputRef.current?.focus();
       }, 100);
     }
-  }, [studyMode, currentCard, activeCards]);
 
-  const handleNextFlashcard = () => {
-    setFlipped(false);
-    setSpeechResult('');
-    if (currentCard < activeCards.length - 1) {
-      setCurrentCard(prev => prev + 1);
-    } else {
-      // 学完本组，进入听写模式
-      setStudyMode('dictation');
-    }
-  };
-
-  const handleDictationSubmit = async () => {
-    if (!dictationInput.trim()) return;
-    
-    const targetWord = activeCards[currentCard].word.toLowerCase();
-    if (dictationInput.trim().toLowerCase() === targetWord) {
-      setDictationStatus('success');
-      setTimeout(async () => {
-        if (currentCard < activeCards.length - 1) {
-          setCurrentCard(prev => prev + 1);
-          setDictationInput('');
-          setDictationStatus('idle');
-        } else {
-          // 全部听写正确，本单元完成！调用后端解锁下一单元
-          if (activeGroupId !== null && !searchTerm) {
-            // 这里不要 await，让后端请求在后台慢慢跑，前端直接跳到恭喜页面
-            updateProgress(courseId || '', activeGroupId).catch(console.error);
-          }
-          setStudyMode('finished');
-        }
-      }, 400); // 答对后只停留 0.4 秒，不用等 1 秒
-    } else {
-      setDictationStatus('error');
-      // 拼写错误时可以再次播放读音
-      playAudio(activeCards[currentCard].word, null);
-    }
-  };
-
-  const handleFlip = () => setFlipped(!flipped);
-
-  const playAudio = (text: string, e: React.MouseEvent | null) => {
-    if (e) e.stopPropagation();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9; 
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const handleRecord = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("抱歉，您的浏览器不支持语音识别功能，请尝试使用 Chrome 浏览器。");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      setIsRecording(true);
-      setSpeechResult('正在倾听...');
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase();
-      const targetWord = activeCards[currentCard].word.toLowerCase();
-      
-      if (transcript.includes(targetWord) || targetWord.includes(transcript)) {
-        setSpeechResult('🎉 发音非常标准！(得分: 95)');
-      } else {
-        setSpeechResult(`🤔 识别结果: "${transcript}"，再试一次吧！`);
+    return () => {
+      if (focusTimeoutRef.current) {
+        window.clearTimeout(focusTimeoutRef.current);
+        focusTimeoutRef.current = null;
       }
     };
+  }, [activeCards, currentCard, playAudio, studyMode]);
 
-    recognition.onerror = (event: any) => {
-      setSpeechResult(`❌ 录音失败: ${event.error}`);
+  useEffect(() => {
+    return () => {
+      if (dictationTimeoutRef.current) {
+        window.clearTimeout(dictationTimeoutRef.current);
+      }
+      if (focusTimeoutRef.current) {
+        window.clearTimeout(focusTimeoutRef.current);
+      }
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
     };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    recognition.start();
-  };
+  }, []);
 
   // 渲染：单元列表视图
   if (studyMode === 'list' && !searchTerm) {
@@ -280,11 +374,28 @@ export default function StudyRoom() {
           <h2 className="text-4xl font-black text-gray-900 mb-4">太棒了！</h2>
           <p className="text-xl text-gray-500 mb-8">您已完美完成本单元的学习和听写测验！</p>
           
-          {activeGroupId !== null && activeGroupId + 1 < groups.length && (
-            <div className="bg-emerald-50 text-emerald-700 px-6 py-4 rounded-2xl font-bold mb-8 flex items-center justify-center gap-3 border border-emerald-100">
-              <span className="text-2xl">🔓</span> 
-              <span>已将进度同步至云端，成功解锁 Unit {activeGroupId + 2}！</span>
+          {syncMessage && (
+            <div className={`px-6 py-4 rounded-2xl font-bold mb-6 flex items-center justify-center gap-3 border ${
+              syncStatus === 'success'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                : syncStatus === 'error'
+                ? 'bg-amber-50 text-amber-700 border-amber-100'
+                : 'bg-slate-50 text-slate-700 border-slate-100'
+            }`}>
+              <span className="text-2xl">
+                {syncStatus === 'success' ? '🔓' : syncStatus === 'error' ? '⚠️' : '⏳'}
+              </span>
+              <span>{syncMessage}</span>
             </div>
+          )}
+
+          {syncStatus === 'error' && activeGroupId !== null && !searchTerm && (
+            <button
+              onClick={() => void syncUnitProgress()}
+              className="w-full py-4 mb-4 bg-amber-500 text-white rounded-2xl font-bold text-lg hover:bg-amber-600 transition-colors shadow-lg hover:-translate-y-0.5"
+            >
+              重新同步进度
+            </button>
           )}
           
           <button 

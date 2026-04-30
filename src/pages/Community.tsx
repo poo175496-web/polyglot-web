@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, MessageCircle, Share2, Flame, Award, TrendingUp } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -42,7 +41,6 @@ const mockLeaderboard = [
 ];
 
 export default function Community() {
-  const [activeTab, setActiveTab] = useState('feed');
   const user = useStore(state => state.user);
 
   return (

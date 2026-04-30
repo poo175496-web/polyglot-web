@@ -4,7 +4,6 @@ import {
   LayoutDashboard, 
   Library, 
   Users, 
-  Settings, 
   LogOut,
   Globe
 } from 'lucide-react';
@@ -19,6 +18,10 @@ export default function Sidebar() {
     { name: '课程大厅', path: '/courses', icon: Library },
     { name: '学习社区', path: '/community', icon: Users },
   ];
+  const adminItems = user?.role === 'admin'
+    ? [{ name: '后台管理', path: '/admin', icon: LayoutDashboard }]
+    : [];
+  const allNavItems = [...navItems, ...adminItems];
 
   return (
     <aside className="w-64 h-screen bg-white border-r border-gray-100 flex flex-col justify-between p-4 fixed left-0 top-0 z-40">
@@ -31,7 +34,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex flex-col gap-2">
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
