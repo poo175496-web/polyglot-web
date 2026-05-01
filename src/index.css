@@ -17,9 +17,10 @@
 body {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 35%),
-    radial-gradient(circle at 80% 20%, rgba(129, 140, 248, 0.16), transparent 28%),
-    linear-gradient(180deg, #050816 0%, #0b1023 42%, #090d1a 100%);
+    radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.18), transparent 22%),
+    radial-gradient(circle at 82% 14%, rgba(139, 92, 246, 0.16), transparent 24%),
+    radial-gradient(circle at 50% 120%, rgba(14, 165, 233, 0.12), transparent 35%),
+    linear-gradient(180deg, #020617 0%, #050b17 48%, #02050d 100%);
   color: #e5eefc;
   @apply antialiased;
 }
@@ -60,6 +61,17 @@ body::before {
 @layer utilities {
   .glass-panel {
     @apply border border-white/10 bg-white/[0.04] backdrop-blur-2xl;
+  }
+
+  .premium-panel {
+    @apply border border-white/10 bg-slate-950/55 backdrop-blur-2xl;
+    box-shadow:
+      0 24px 80px rgba(2, 6, 23, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .hero-spotlight {
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 70%);
   }
 
   .signal-ring {

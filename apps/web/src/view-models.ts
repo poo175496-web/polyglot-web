@@ -47,6 +47,14 @@ export function buildDashboardViewModel({
       subtitle: heroDeck
         ? `已解锁 ${Math.min(heroDeck.unlockedUnitIndex + 1, heroDeck.unitCount)} / ${heroDeck.unitCount} 单元`
         : '连接新 API 后显示真实数据',
+      primaryAction: {
+        label: '继续主路线',
+        href: `/rebuild/study/${heroDeck?.id || 'zhongkao'}`,
+      },
+      secondaryAction: {
+        label: '查看复习总控',
+        href: '/rebuild/review',
+      },
     },
     stats: {
       dueReviews: overview.dueReviews,

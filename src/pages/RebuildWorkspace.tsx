@@ -40,7 +40,12 @@ const api = createRebuildApiClient({
 type WorkspaceMode = 'dashboard' | 'decks' | 'deck-detail' | 'study' | 'review' | 'mistakes';
 
 interface DashboardModel {
-  hero: { title: string; subtitle: string };
+  hero: {
+    title: string;
+    subtitle: string;
+    primaryAction: { label: string; href: string };
+    secondaryAction: { label: string; href: string };
+  };
   stats: {
     dueReviews: number;
     trackedDecks: number;
@@ -165,6 +170,24 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
     if (mode === 'mistakes') return '错词本';
     return '新学习页';
   }, [mode]);
+  const pageLead = useMemo(() => {
+    if (mode === 'dashboard') {
+      return '不再是后台面板，而是把主路线推进、复习压力和薄弱词书放到同一个指挥台里。';
+    }
+    if (mode === 'decks') {
+      return '把中考、高考、雅思、托福做成清晰的考试路线入口，而不是一排普通课程卡。';
+    }
+    if (mode === 'deck-detail') {
+      return '每个单元都作为路线阶段呈现，前进感和解锁感必须一眼可见。';
+    }
+    if (mode === 'study') {
+      return '把训练主舞台收拢到一个焦点区域，让你进入页面就知道现在该做什么。';
+    }
+    if (mode === 'review') {
+      return '先消灭今天最该处理的复习压力，再切换到其他路线，不浪费动作。';
+    }
+    return '把高风险错词和观察错词分开处理，让纠错更像攻坚战，而不是被动翻列表。';
+  }, [mode]);
 
   const studyLaunch = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -182,6 +205,14 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
     const featuredDeckId = deckId || dashboard?.deckCards[0]?.id || decks?.[0]?.id || 'zhongkao';
     return getDeckPresentation(featuredDeckId);
   }, [dashboard?.deckCards, deckId, decks]);
+  const heroPrimaryAction = dashboard?.hero.primaryAction || {
+    label: mode === 'review' ? '连续进入复习' : '直接开始学习',
+    href: mode === 'review' ? '/rebuild/review' : `/rebuild/study/${deckId || 'zhongkao'}`,
+  };
+  const heroSecondaryAction = dashboard?.hero.secondaryAction || {
+    label: mode === 'mistakes' ? '查看错词本' : '返回仪表盘',
+    href: mode === 'mistakes' ? '/rebuild/mistakes' : '/rebuild/dashboard',
+  };
 
   function resetPracticeUiState() {
     setRevealed(false);
@@ -444,11 +475,15 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
         className="flagship-float pointer-events-none absolute -right-24 top-40 h-80 w-80 rounded-full blur-3xl"
         style={{ background: `radial-gradient(circle, ${featuredDeckPresentation.accentTo} 0%, transparent 74%)` }}
       />
-      <div className="signal-ring glass-panel relative overflow-hidden rounded-[2.75rem] px-8 py-10 text-white sm:px-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_28%),radial-gradient(circle_at_80%_15%,rgba(129,140,248,0.2),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.1),transparent_26%)]" />
-        <div className="absolute inset-y-0 right-0 hidden w-[34rem] bg-[linear-gradient(90deg,transparent,rgba(56,189,248,0.08))] lg:block" />
-        <div className="relative flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-3xl">
+      <div className="premium-panel relative overflow-hidden rounded-[2.9rem] px-8 py-10 text-white sm:px-10">
+        <div className="hero-spotlight pointer-events-none absolute -left-16 top-0 h-72 w-72 rounded-full blur-3xl" />
+        <div
+          className="pointer-events-none absolute -right-20 top-12 h-80 w-80 rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${featuredDeckPresentation.accentTo} 0%, transparent 74%)` }}
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.02),transparent_38%,rgba(56,189,248,0.06)_100%)]" />
+        <div className="relative grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="max-w-4xl">
             <div
               className="inline-flex items-center gap-3 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.35em]"
               style={{
@@ -460,67 +495,62 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
               <Sparkles className="h-4 w-4" />
               {featuredDeckPresentation.accentLabel}
             </div>
-            <h1 className="mt-6 max-w-3xl text-4xl font-black leading-[1.05] text-white sm:text-5xl xl:text-6xl">
-              {pageTitle}
-            </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
-              这里已经完全切到新架构学习链路，用真实 API、真实会话、真实复习数据驱动你的英语训练，不再是传统 demo 面板。
-            </p>
-            <p className="mt-4 text-sm font-black uppercase tracking-[0.28em]" style={{ color: featuredDeckPresentation.primaryColor }}>
+            <p className="mt-6 text-sm font-black uppercase tracking-[0.32em]" style={{ color: featuredDeckPresentation.primaryColor }}>
               {featuredDeckPresentation.accentWord}
             </p>
+            <h1 className="mt-4 max-w-4xl text-5xl font-black leading-[0.96] text-white sm:text-6xl xl:text-[4.8rem]">
+              {pageTitle}
+            </h1>
+            <p className="mt-6 max-w-3xl text-base leading-8 text-slate-300">{pageLead}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 className="rounded-full bg-white px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100"
-                to="/rebuild/dashboard"
+                to={heroPrimaryAction.href}
               >
-                进入旗舰仪表盘
+                {heroPrimaryAction.label}
               </Link>
               <Link
                 className="rounded-full border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:border-cyan-300/30 hover:bg-white/10"
-                to="/rebuild/study/zhongkao"
+                to={heroSecondaryAction.href}
               >
-                直接开始学习
+                {heroSecondaryAction.label}
+              </Link>
+            </div>
+            <div className="mt-10 flex flex-wrap gap-2">
+              <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/dashboard">
+                仪表盘
+              </Link>
+              <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/decks">
+                课程库
+              </Link>
+              <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/study/zhongkao">
+                学习页
+              </Link>
+              <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/review">
+                今日复习
+              </Link>
+              <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/mistakes">
+                错词本
               </Link>
             </div>
           </div>
-          <div className="grid w-full gap-3 sm:grid-cols-3 xl:w-[28rem]">
-            <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-400">Runtime</p>
-              <p className="mt-3 text-2xl font-black text-white">Live</p>
-              <p className="mt-2 text-xs text-slate-400">API、Loader、练习流全部实时驱动</p>
+          <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-500">Runtime</p>
+              <p className="mt-3 text-3xl font-black text-white">Real Data</p>
+              <p className="mt-2 text-sm leading-7 text-slate-400">学习会话、复习记录、错词压力都由真实链路驱动，不再是展示假面板。</p>
             </div>
-            <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-400">Experience</p>
-              <p className="mt-3 text-2xl font-black text-white">4 Modes</p>
-              <p className="mt-2 text-xs text-slate-400">Flashcard / Choice / Spelling / Cloze</p>
+            <div className="rounded-[2rem] border border-cyan-300/15 bg-cyan-300/10 p-5">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-cyan-200">Focus</p>
+              <p className="mt-3 text-3xl font-black text-white">Single Route</p>
+              <p className="mt-2 text-sm leading-7 text-cyan-100/80">每个页面都应该只强调一个核心动作，而不是把所有功能同时抛给你。</p>
             </div>
-            <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-4 backdrop-blur-xl">
-              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-400">Mission</p>
-              <p className="mt-3 text-2xl font-black text-white">Upgrade</p>
-              <p className="mt-2 text-xs text-slate-400">把学习站打磨成真正的大产品界面</p>
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-5">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-500">Quality</p>
+              <p className="mt-3 text-3xl font-black text-white">Premium</p>
+              <p className="mt-2 text-sm leading-7 text-slate-400">这次前端不是再叠玻璃卡，而是做成真正像学习产品的叙事和舞台。</p>
             </div>
           </div>
-        </div>
-        <div className="relative mt-8 flex flex-wrap gap-2">
-          <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/dashboard">
-            仪表盘
-          </Link>
-          <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/decks">
-            课程库
-          </Link>
-          <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/decks/zhongkao">
-            详情页
-          </Link>
-          <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/study/zhongkao">
-            学习页
-          </Link>
-          <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/review">
-            今日复习
-          </Link>
-          <Link className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/10" to="/rebuild/mistakes">
-            错词本
-          </Link>
         </div>
       </div>
 
@@ -542,41 +572,66 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
       ) : null}
 
       {!loading && !error && mode === 'dashboard' && dashboard ? (
-        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
-          <div className="signal-ring glass-panel relative overflow-hidden rounded-[2.75rem] p-8 sm:p-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.1),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(129,140,248,0.12),transparent_30%)]" />
+        <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+          <div className="premium-panel relative overflow-hidden rounded-[2.75rem] p-8 sm:p-10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.14),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.02),transparent_40%,rgba(129,140,248,0.08)_100%)]" />
             <div className="relative">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/15 bg-cyan-300/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.3em] text-cyan-200">
                 <Sparkles className="h-4 w-4" />
-                Battle Dashboard
+                Command Center
               </div>
-              <h2 className="mt-5 max-w-3xl text-4xl font-black leading-tight text-white sm:text-5xl">
-                {dashboard.hero.title}
-              </h2>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">{dashboard.hero.subtitle}</p>
-              <div className="mt-8 grid gap-4 md:grid-cols-5">
-                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-5 backdrop-blur-xl">
-                  <p className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Due Reviews</p>
-                  <p className="mt-4 text-4xl font-black text-white">{dashboard.stats.dueReviews}</p>
+              <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
+                <div className="max-w-3xl">
+                  <h2 className="text-4xl font-black leading-tight text-white sm:text-5xl">{dashboard.hero.title}</h2>
+                  <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">{dashboard.hero.subtitle}</p>
                 </div>
-                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-5 backdrop-blur-xl">
-                  <p className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Decks</p>
-                  <p className="mt-4 text-4xl font-black text-white">{dashboard.stats.trackedDecks}</p>
+                <div className="rounded-[2rem] border border-cyan-300/20 bg-cyan-300/10 px-5 py-4">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-200">Primary Route</p>
+                  <p className="mt-2 text-2xl font-black text-white">{featuredDeckPresentation.accentWord}</p>
                 </div>
-                <div className="rounded-[1.75rem] border border-cyan-400/20 bg-cyan-400/10 p-5 backdrop-blur-xl md:col-span-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.25em] text-cyan-200">Live Signal</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Today</p>
-                      <p className="mt-2 text-base font-black text-white">{dashboard.stats.todayReviewedLabel}</p>
+              </div>
+              <div className="mt-8 grid gap-4 md:grid-cols-4">
+                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Due</p>
+                  <p className="mt-3 text-4xl font-black text-white">{dashboard.stats.dueReviews}</p>
+                </div>
+                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Decks</p>
+                  <p className="mt-3 text-4xl font-black text-white">{dashboard.stats.trackedDecks}</p>
+                </div>
+                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Today</p>
+                  <p className="mt-3 text-base font-black text-white">{dashboard.stats.todayReviewedLabel}</p>
+                </div>
+                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-5">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Accuracy</p>
+                  <p className="mt-3 text-base font-black text-white">{dashboard.stats.accuracyLabel}</p>
+                </div>
+              </div>
+              <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+                <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Today Focus</p>
+                  <p className="mt-3 text-2xl font-black text-white">{dashboard.stats.weakDeckLabel}</p>
+                  <p className="mt-3 text-sm leading-7 text-slate-400">先处理最弱路线，再回到主课程推进新单元，整个学习节奏会更稳。</p>
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <Link to={dashboard.hero.primaryAction.href} className="rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100">
+                      {dashboard.hero.primaryAction.label}
+                    </Link>
+                    <Link to={dashboard.hero.secondaryAction.href} className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/[0.08]">
+                      {dashboard.hero.secondaryAction.label}
+                    </Link>
+                  </div>
+                </div>
+                <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">System Readout</p>
+                  <div className="mt-4 space-y-4">
+                    <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
+                      <p className="text-sm font-bold text-white">真实学习数据</p>
+                      <p className="mt-2 text-sm leading-7 text-slate-400">前端状态、复习任务、错词压力全部来自实际 API 链路。</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Accuracy</p>
-                      <p className="mt-2 text-base font-black text-white">{dashboard.stats.accuracyLabel}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Risk</p>
-                      <p className="mt-2 text-base font-black text-white">{dashboard.stats.weakDeckLabel}</p>
+                    <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.05] p-4">
+                      <p className="text-sm font-bold text-white">连续训练主路径</p>
+                      <p className="mt-2 text-sm leading-7 text-slate-400">把学习路线收拢到少数明确动作，不再像后台一样四处跳转。</p>
                     </div>
                   </div>
                 </div>
@@ -584,25 +639,23 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
             </div>
           </div>
           <div className="space-y-6">
-            <div className="signal-ring glass-panel rounded-[2.5rem] p-6">
-              <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Course Radar</p>
+            <div className="premium-panel rounded-[2.5rem] p-6">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Route Stack</p>
               <div className="mt-5 space-y-3">
                 {dashboard.deckCards.map((deck, index) => (
                   <Link
                     key={deck.id}
                     to={`/rebuild/study/${deck.id}`}
-                    className="block rounded-[1.75rem] border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:bg-white/[0.08]"
-                    style={{
-                      boxShadow: `inset 0 0 0 1px ${getDeckPresentation(deck.id).primaryColor}15`,
-                    }}
+                    className="block rounded-[1.9rem] border border-white/10 bg-white/[0.04] p-5 transition hover:-translate-y-1 hover:bg-white/[0.08]"
+                    style={{ boxShadow: `inset 0 0 0 1px ${getDeckPresentation(deck.id).primaryColor}15` }}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: getDeckPresentation(deck.id).primaryColor }}>
-                          {getDeckPresentation(deck.id).accentLabel} 0{index + 1}
+                          Route {String(index + 1).padStart(2, '0')}
                         </p>
-                        <p className="mt-2 text-base font-black text-white">{deck.title}</p>
-                        <p className="mt-2 text-sm text-slate-400">{deck.progressLabel}</p>
+                        <p className="mt-3 text-xl font-black text-white">{deck.title}</p>
+                        <p className="mt-2 text-sm leading-7 text-slate-400">{deck.progressLabel}</p>
                       </div>
                       <ChevronRight className="mt-1 h-5 w-5 text-slate-500" />
                     </div>
@@ -610,38 +663,38 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                 ))}
               </div>
             </div>
-            <div className="signal-ring glass-panel rounded-[2.5rem] p-6">
-              <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Next Move</p>
-              <p className="mt-4 text-2xl font-black text-white">继续推进你的薄弱词书，把待复习卡片吃掉。</p>
-              <p className="mt-3 text-sm leading-7 text-slate-400">
-                先从高风险词书切入，再回到主课程继续解锁，这样你的掌握率会比盲目刷新词更稳。
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  to="/rebuild/review"
-                  className="rounded-full bg-white px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100"
-                >
-                  进入今日复习
-                </Link>
-                <Link
-                  to="/rebuild/mistakes"
-                  className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-slate-200 transition hover:border-cyan-300/30 hover:bg-white/[0.08]"
-                >
-                  查看错词本
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
       ) : null}
 
       {!loading && !error && mode === 'decks' && decks ? (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+          <div className="premium-panel rounded-[2.5rem] p-7">
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Route Overview</p>
+            <h2 className="mt-4 text-4xl font-black text-white">考试路线库</h2>
+            <p className="mt-4 text-sm leading-8 text-slate-400">
+              这里不是普通课程列表，而是四条不同目标路线。你应该一眼看到自己现在在哪条线、还差多少、下一步该进哪门。
+            </p>
+            <div className="mt-8 space-y-4">
+              {decks.map((deck) => (
+                <div key={deck.id} className="rounded-[1.7rem] border border-white/10 bg-white/[0.04] p-4">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: getDeckPresentation(deck.id).primaryColor }}>
+                    {getDeckPresentation(deck.id).accentLabel}
+                  </p>
+                  <p className="mt-2 text-lg font-black text-white">{deck.title}</p>
+                  <p className="mt-2 text-sm text-slate-400">
+                    已开放 {Math.min(deck.unlockedUnitIndex + 1, deck.unitCount)} / {deck.unitCount} 单元
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
           {decks.map((deck) => (
             <Link
               key={deck.id}
               to={`/rebuild/decks/${deck.id}`}
-              className="group signal-ring glass-panel relative overflow-hidden rounded-[2.4rem] p-6 transition duration-300 hover:-translate-y-1"
+              className="group premium-panel relative overflow-hidden rounded-[2.5rem] p-7 transition duration-300 hover:-translate-y-1.5"
             >
               <div
                 className="absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100"
@@ -651,7 +704,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
               />
               <div className="relative flex items-center justify-between">
                 <div
-                  className="rounded-2xl border p-3"
+                  className="rounded-[1.6rem] border p-4"
                   style={{
                     borderColor: `${getDeckPresentation(deck.id).primaryColor}33`,
                     backgroundColor: `${getDeckPresentation(deck.id).primaryColor}1A`,
@@ -663,12 +716,12 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                 <ChevronRight className="h-5 w-5 text-slate-500 transition" style={{ color: getDeckPresentation(deck.id).primaryColor }} />
               </div>
               <div className="relative">
-                <p className="mt-6 text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: getDeckPresentation(deck.id).primaryColor }}>
+                <p className="mt-8 text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: getDeckPresentation(deck.id).primaryColor }}>
                   {getDeckPresentation(deck.id).accentWord}
                 </p>
-                <h2 className="mt-4 text-3xl font-black leading-tight text-white">{deck.title}</h2>
+                <h2 className="mt-4 text-4xl font-black leading-tight text-white">{deck.title}</h2>
               </div>
-              <div className="relative mt-6 flex items-center gap-4 text-sm text-slate-400">
+              <div className="relative mt-8 flex items-center gap-4 text-sm text-slate-400">
                 <span className="inline-flex items-center gap-2 text-slate-300">
                   <Layers3 className="h-4 w-4" />
                   {deck.unitCount} 单元
@@ -684,10 +737,10 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                   }}
                 />
               </div>
-              <div className="relative mt-6 flex items-center justify-between">
+              <div className="relative mt-8 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">Route Status</p>
-                  <p className="mt-2 text-sm font-bold text-slate-300">继续解锁下一单元</p>
+                  <p className="mt-2 text-sm font-bold text-slate-300">进入这条路线的下一阶段</p>
                 </div>
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-200 transition group-hover:bg-cyan-300/15">
                   进入学习
@@ -695,12 +748,13 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
               </div>
             </Link>
           ))}
+          </div>
         </div>
       ) : null}
 
       {!loading && !error && mode === 'deck-detail' && deckDetail ? (
         <div className="space-y-6">
-          <div className="signal-ring glass-panel relative overflow-hidden rounded-[2.6rem] p-8 sm:p-10">
+          <div className="premium-panel relative overflow-hidden rounded-[2.7rem] p-8 sm:p-10">
             <div
               className="absolute inset-0 aurora-shift"
               style={{
@@ -708,24 +762,44 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
               }}
             />
             <div className="relative">
-              <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Course Mission</p>
-              <h2 className="mt-4 text-4xl font-black text-white sm:text-5xl">{deckDetail.title}</h2>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">{deckDetail.summary}</p>
-              <p className="mt-4 text-sm font-black uppercase tracking-[0.28em]" style={{ color: featuredDeckPresentation.primaryColor }}>
-                {featuredDeckPresentation.accentLabel} / {featuredDeckPresentation.accentWord}
-              </p>
+              <div className="grid gap-6 xl:grid-cols-[1fr_0.72fr]">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Course Mission</p>
+                  <h2 className="mt-4 text-4xl font-black text-white sm:text-5xl">{deckDetail.title}</h2>
+                  <p className="mt-4 max-w-3xl text-sm leading-8 text-slate-300">{deckDetail.summary}</p>
+                  <p className="mt-5 text-sm font-black uppercase tracking-[0.28em]" style={{ color: featuredDeckPresentation.primaryColor }}>
+                    {featuredDeckPresentation.accentLabel} / {featuredDeckPresentation.accentWord}
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.05] p-5">
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Unlocked</p>
+                    <p className="mt-3 text-4xl font-black text-white">
+                      {deckDetail.unitCards.filter((unit) => unit.status !== 'locked').length}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-400">已进入的阶段数</p>
+                  </div>
+                  <div className="rounded-[1.8rem] border border-cyan-300/20 bg-cyan-300/10 p-5">
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-200">Next Stage</p>
+                    <p className="mt-3 text-xl font-black text-white">
+                      {deckDetail.unitCards.find((unit) => unit.status === 'available')?.title || '继续复习已完成阶段'}
+                    </p>
+                    <p className="mt-2 text-sm text-cyan-100/80">路线会随着完成度继续解锁</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {deckDetail.unitCards.map((unit, index) => (
               <div
                 key={unit.id}
-                className={`signal-ring relative overflow-hidden rounded-[2rem] border p-5 backdrop-blur-xl ${
+                className={`premium-panel relative overflow-hidden rounded-[2.1rem] p-6 ${
                   unit.status === 'completed'
-                    ? 'border-emerald-300/20 bg-emerald-400/10'
+                    ? 'border border-emerald-300/20 bg-emerald-400/10'
                     : unit.status === 'available'
-                      ? 'border-cyan-300/20 bg-cyan-400/10'
-                      : 'border-white/10 bg-white/[0.04]'
+                      ? 'border border-cyan-300/20 bg-cyan-400/10'
+                      : 'border border-white/10 bg-slate-950/55'
                 }`}
               >
                 <div className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
@@ -761,12 +835,57 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
       ) : null}
 
       {!loading && !error && mode === 'study' && study ? (
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
+        <div className="grid gap-6 xl:grid-cols-[0.72fr_1.18fr_0.72fr]">
           <div className="space-y-6">
-            <div className="signal-ring glass-panel relative overflow-hidden rounded-[2.75rem] p-8 sm:p-10">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.12),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(129,140,248,0.14),transparent_28%)]" />
+            {activeStudyCard ? (
+              <div className="premium-panel rounded-[2.6rem] p-6">
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Word Rail</p>
+                <h3 className="mt-4 text-4xl font-black text-white">
+                  {activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}
+                </h3>
+                <div className="mt-5 grid gap-4">
+                  <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">音标</p>
+                    <p className="mt-3 text-sm font-bold text-slate-100">{activeStudyCard.phonetic || '待补充'}</p>
+                  </div>
+                  <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">词根</p>
+                    <p className="mt-3 text-sm font-bold text-slate-100">{activeStudyCard.root || '待补充'}</p>
+                  </div>
+                </div>
+                <div className="mt-4 rounded-[1.9rem] border border-cyan-300/10 bg-cyan-300/10 p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">例句语境</p>
+                  <p className="mt-3 text-sm leading-7 text-slate-100">{activeStudyCard.example || '当前单词暂未配置例句。'}</p>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSpeakCurrentWord}
+                    disabled={!audioAvailable}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Volume2 className="h-4 w-4" />
+                    播放发音
+                  </button>
+                  {activeStudyCard.theme ? (
+                    <span className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200">
+                      主题: {activeStudyCard.theme}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {!audioAvailable ? (
+              <div className="rounded-[2rem] border border-amber-300/20 bg-amber-400/10 p-5 text-sm font-bold text-amber-200">
+                当前浏览器不支持语音播放，建议使用系统浏览器或桌面浏览器体验完整训练流程。
+              </div>
+            ) : null}
+          </div>
+          <div className="space-y-6">
+            <div className="premium-panel relative overflow-hidden rounded-[2.75rem] p-8 sm:p-10">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(129,140,248,0.18),transparent_26%)]" />
               <div className="relative">
-                <p className="text-xs font-black uppercase tracking-[0.32em] text-slate-500">Study Cockpit</p>
+                <p className="text-xs font-black uppercase tracking-[0.32em] text-slate-500">Study Stage</p>
                 <h2 className="mt-4 text-4xl font-black leading-tight text-white">{study.headerTitle}</h2>
                 <p className="mt-4 text-lg font-bold text-cyan-200">{study.activeUnitLabel}</p>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">{study.unlockedSummary}</p>
@@ -795,78 +914,237 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                   当前进度 {Math.min(currentCardIndex + 1, study.cards.length)} / {study.cards.length}
                 </span>
               </div>
+            </div>
+            <div className="premium-panel rounded-[2.75rem] p-6 sm:p-8">
+              {activeStudyCard ? (
+                <div className="space-y-4">
+                  {activePracticeKind === 'flashcard' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setRevealed((value) => !value)}
+                        className="w-full rounded-[2.2rem] border border-white/10 bg-white/[0.05] p-7 text-left transition hover:border-cyan-300/20 hover:bg-white/[0.08]"
+                      >
+                        <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Flashcard</p>
+                        <h3 className="mt-4 text-4xl font-black text-white">
+                          {activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}
+                        </h3>
+                        <p className="mt-5 text-base leading-8 text-slate-300">
+                          {revealed
+                            ? activeStudyCard.answer || '当前卡片暂无答案内容'
+                            : '先在脑子里完整回忆，再翻开答案，然后判断自己是否真的记住。'}
+                        </p>
+                      </button>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleStudyDecision(false)}
+                          disabled={!revealed || submittingReview}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300/20 bg-rose-400/10 px-4 py-3 font-bold text-rose-100 transition hover:bg-rose-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <XCircle className="h-5 w-5" />
+                          还没记住
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleStudyDecision(true)}
+                          disabled={!revealed || submittingReview}
+                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 font-bold text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="h-5 w-5" />
+                          记住了
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+                  {activePracticeKind === 'choice' ? (
+                    <>
+                      <div className="rounded-[2.2rem] border border-white/10 bg-white/[0.05] p-7">
+                        <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Choice Drill</p>
+                        <h3 className="mt-4 text-4xl font-black text-white">
+                          {activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}
+                        </h3>
+                        <p className="mt-3 text-sm text-slate-300">选择最准确的中文释义。</p>
+                        <div className="mt-5 grid gap-3">
+                          {choiceOptions.map((option) => {
+                            const isCorrect = option === activeStudyCard.answer;
+                            const isSelected = choiceFeedback?.selected === option;
+                            return (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => handleChoiceSelect(option)}
+                                disabled={Boolean(choiceFeedback) || submittingReview}
+                                className={`rounded-2xl border px-4 py-4 text-left font-bold transition ${
+                                  choiceFeedback
+                                    ? isCorrect
+                                      ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'
+                                      : isSelected
+                                        ? 'border-rose-300/20 bg-rose-400/10 text-rose-100'
+                                        : 'border-white/10 bg-white/[0.03] text-slate-500'
+                                    : 'border-white/10 bg-white/[0.03] text-slate-100 hover:border-cyan-300/20 hover:bg-white/[0.08]'
+                                }`}
+                              >
+                                {option}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {choiceFeedback ? (
+                        <div className="space-y-3">
+                          <div className={`rounded-2xl p-4 text-sm font-bold ${choiceFeedback.correct ? 'bg-emerald-400/10 text-emerald-100' : 'bg-rose-400/10 text-rose-100'}`}>
+                            {choiceFeedback.correct
+                              ? '回答正确，这张卡可以进入更深一层练习。'
+                              : `这题答错了，正确释义是：${activeStudyCard.answer || '暂无答案'}`}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleStudyDecision(choiceFeedback.correct)}
+                            disabled={submittingReview}
+                            className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            继续下一题
+                          </button>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {activePracticeKind === 'spelling' ? (
+                    <>
+                      <div className="rounded-[2.2rem] border border-white/10 bg-white/[0.05] p-7">
+                        <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Spelling Drill</p>
+                        <h3 className="mt-4 text-3xl font-black text-white">{activeStudyCard.answer || '暂无释义'}</h3>
+                        <p className="mt-3 text-sm leading-7 text-slate-300">
+                          根据释义和例句拼出英文单词。{activeStudyCard.example ? ` 例句: ${activeStudyCard.example}` : ''}
+                        </p>
+                        <input
+                          value={spellingInput}
+                          onChange={(event) => setSpellingInput(event.target.value)}
+                          placeholder="输入英文单词"
+                          className="mt-5 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 text-base font-bold text-white outline-none transition focus:border-cyan-300/30"
+                        />
+                      </div>
+                      {!spellingFeedback ? (
+                        <button
+                          type="button"
+                          onClick={handleSpellingCheck}
+                          disabled={!spellingInput.trim() || submittingReview}
+                          className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          检查拼写
+                        </button>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className={`rounded-2xl p-4 text-sm font-bold ${spellingFeedback.correct ? 'bg-emerald-400/10 text-emerald-100' : 'bg-amber-400/10 text-amber-100'}`}>
+                            {spellingFeedback.correct
+                              ? '拼写正确，继续保持。'
+                              : `拼写不对，正确答案是：${activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}`}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleStudyDecision(spellingFeedback.correct)}
+                            disabled={submittingReview}
+                            className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            继续下一题
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
+                  {activePracticeKind === 'cloze' ? (
+                    <>
+                      <div className="rounded-[2.2rem] border border-white/10 bg-white/[0.05] p-7">
+                        <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Cloze Drill</p>
+                        <h3 className="mt-4 text-3xl font-black text-white">把空缺单词补完整</h3>
+                        <p className="mt-3 text-sm leading-7 text-slate-300">
+                          {buildClozeText({
+                            sentence: activeStudyCard.example || '',
+                            word: activeStudyCard.vocabularyWord || activeStudyCard.prompt || '',
+                          }) || '当前卡片暂无可挖空的例句，先根据词义回忆单词。'}
+                        </p>
+                        <p className="mt-3 text-sm text-slate-400">提示释义: {activeStudyCard.answer || '暂无释义'}</p>
+                        <input
+                          value={spellingInput}
+                          onChange={(event) => setSpellingInput(event.target.value)}
+                          placeholder="输入缺失的英文单词"
+                          className="mt-5 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-4 text-base font-bold text-white outline-none transition focus:border-cyan-300/30"
+                        />
+                      </div>
+                      {!spellingFeedback ? (
+                        <button
+                          type="button"
+                          onClick={handleSpellingCheck}
+                          disabled={!spellingInput.trim() || submittingReview}
+                          className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          检查填空
+                        </button>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className={`rounded-2xl p-4 text-sm font-bold ${spellingFeedback.correct ? 'bg-emerald-400/10 text-emerald-100' : 'bg-amber-400/10 text-amber-100'}`}>
+                            {spellingFeedback.correct
+                              ? '填空正确，说明你已经能把单词放回语境。'
+                              : `填空不对，正确答案是：${activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}`}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleStudyDecision(spellingFeedback.correct)}
+                            disabled={submittingReview}
+                            className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            继续下一题
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div className="premium-panel rounded-[2.6rem] p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Mission Brief</p>
+                  <p className="mt-3 text-3xl font-black text-white">{study.cardCountLabel}</p>
+                </div>
+                <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
+                  {activePracticeKind}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-slate-400">
+                当前进度 {Math.min(currentCardIndex + 1, study.cards.length)} / {study.cards.length}
+              </p>
               {missionSummary ? (
-                <div className="mt-8 grid gap-4 md:grid-cols-3">
-                  <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.06] p-5">
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Mission</p>
-                    <p className="mt-3 text-xl font-black text-white">{missionSummary.missionTitle}</p>
-                    <p className="mt-2 text-sm text-slate-400">{missionSummary.remainingLabel}</p>
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.04] p-5">
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Stage</p>
+                    <p className="mt-3 text-xl font-black text-white">{missionSummary.stageLabel}</p>
+                    <p className="mt-2 text-sm text-slate-400">{missionSummary.missionTitle}</p>
                   </div>
-                  <div className="rounded-[1.8rem] border border-cyan-300/20 bg-cyan-300/10 p-5">
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-200">Progress</p>
-                    <p className="mt-3 text-xl font-black text-white">{missionSummary.progressLabel}</p>
+                  <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.04] p-5">
+                    <div className="flex items-center justify-between gap-3 text-sm text-slate-300">
+                      <span>{missionSummary.progressLabel}</span>
+                      <span>{missionSummary.accuracyLabel}</span>
+                    </div>
                     <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300 transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-indigo-400 transition-all duration-500"
                         style={{ width: `${missionSummary.completionRatio}%` }}
                       />
                     </div>
-                  </div>
-                  <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.06] p-5">
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-500">Accuracy</p>
-                    <p className="mt-3 text-xl font-black text-white">{missionSummary.accuracyLabel}</p>
-                    <p className="mt-2 text-sm text-slate-400">每完成一题都会实时更新任务命中率</p>
+                    <p className="mt-4 text-sm leading-7 text-slate-400">{missionSummary.remainingLabel}</p>
                   </div>
                 </div>
               ) : null}
             </div>
-            {activeStudyCard ? (
-              <div className="signal-ring glass-panel rounded-[2.75rem] p-8 sm:p-10">
-                <p className="text-xs font-black uppercase tracking-[0.32em] text-slate-500">Word Intelligence</p>
-                <h3 className="mt-4 text-4xl font-black text-white">
-                  {activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}
-                </h3>
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">音标</p>
-                    <p className="mt-3 text-sm font-bold text-slate-100">{activeStudyCard.phonetic || '待补充'}</p>
-                  </div>
-                  <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.05] p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">词根</p>
-                    <p className="mt-3 text-sm font-bold text-slate-100">{activeStudyCard.root || '待补充'}</p>
-                  </div>
-                </div>
-                <div className="mt-4 rounded-[2rem] border border-cyan-300/10 bg-cyan-300/10 p-5">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200">例句语境</p>
-                  <p className="mt-3 text-sm leading-7 text-slate-100">{activeStudyCard.example || '当前单词暂未配置例句。'}</p>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSpeakCurrentWord}
-                    disabled={!audioAvailable}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Volume2 className="h-4 w-4" />
-                    播放发音
-                  </button>
-                  {!audioAvailable ? (
-                    <span className="inline-flex rounded-full border border-amber-300/20 bg-amber-400/10 px-4 py-2 text-sm font-bold text-amber-200">
-                      当前浏览器不支持语音播放
-                    </span>
-                  ) : null}
-                </div>
-                {activeStudyCard.theme ? (
-                  <div className="mt-4 inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200">
-                    主题: {activeStudyCard.theme}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
             {reviewResult && completionSummary ? (
-              <div className="signal-ring mt-6 overflow-hidden rounded-[2.4rem] border border-emerald-300/20 bg-emerald-400/10 p-6 text-emerald-100">
+              <div className="signal-ring overflow-hidden rounded-[2.4rem] border border-emerald-300/20 bg-emerald-400/10 p-6 text-emerald-100">
                 <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-200">{completionSummary.title}</p>
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div className="mt-4 grid gap-4">
                   <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.08] p-4">
                     <p className="text-[11px] font-black uppercase tracking-[0.24em] text-emerald-200">Hit Rate</p>
                     <p className="mt-3 text-2xl font-black text-white">{completionSummary.accuracyLabel}</p>
@@ -880,227 +1158,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                     <p className="mt-3 text-2xl font-black text-white">{completionSummary.progressLabel}</p>
                   </div>
                 </div>
-                <p className="mt-4 text-sm text-emerald-100/90">{completionSummary.nextActionLabel}</p>
-              </div>
-            ) : null}
-          </div>
-          <div className="signal-ring glass-panel rounded-[2.75rem] p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Training Stage</p>
-                <p className="mt-3 text-3xl font-black text-white">{study.cardCountLabel}</p>
-              </div>
-              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
-                {activePracticeKind}
-              </span>
-            </div>
-            <p className="mt-3 text-sm text-slate-400">
-              当前进度 {Math.min(currentCardIndex + 1, study.cards.length)} / {study.cards.length}
-            </p>
-            {missionSummary ? (
-              <div className="mt-5 rounded-[1.8rem] border border-white/10 bg-white/[0.04] p-5">
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Mission Brief</p>
-                <p className="mt-3 text-lg font-black text-white">{missionSummary.missionTitle}</p>
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="flex items-center justify-between gap-3 text-slate-300">
-                    <span>{missionSummary.progressLabel}</span>
-                    <span>{missionSummary.accuracyLabel}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-indigo-400 transition-all duration-500"
-                      style={{ width: `${missionSummary.completionRatio}%` }}
-                    />
-                  </div>
-                  <p className="text-slate-400">{missionSummary.remainingLabel}</p>
-                </div>
-              </div>
-            ) : null}
-            {activeStudyCard ? (
-              <div className="mt-6 space-y-4">
-                {activePracticeKind === 'flashcard' ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setRevealed((value) => !value)}
-                      className="w-full rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 text-left transition hover:border-cyan-300/20 hover:bg-white/[0.08]"
-                    >
-                      <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Flashcard</p>
-                      <h3 className="mt-4 text-3xl font-black text-white">
-                        {activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}
-                      </h3>
-                      <p className="mt-4 text-sm leading-7 text-slate-300">
-                        {revealed
-                          ? activeStudyCard.answer || '当前卡片暂无答案内容'
-                          : '先回忆，再点开答案，然后判断自己是否真正记住。'}
-                      </p>
-                    </button>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleStudyDecision(false)}
-                        disabled={!revealed || submittingReview}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300/20 bg-rose-400/10 px-4 py-3 font-bold text-rose-100 transition hover:bg-rose-400/15 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <XCircle className="h-5 w-5" />
-                        还没记住
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleStudyDecision(true)}
-                        disabled={!revealed || submittingReview}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 font-bold text-emerald-100 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="h-5 w-5" />
-                        记住了
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-                {activePracticeKind === 'choice' ? (
-                  <>
-                    <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6">
-                      <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Choice Drill</p>
-                      <h3 className="mt-4 text-3xl font-black text-white">
-                        {activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}
-                      </h3>
-                      <p className="mt-3 text-sm text-slate-300">选择最准确的中文释义。</p>
-                      <div className="mt-5 grid gap-3">
-                        {choiceOptions.map((option) => {
-                          const isCorrect = option === activeStudyCard.answer;
-                          const isSelected = choiceFeedback?.selected === option;
-                          return (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => handleChoiceSelect(option)}
-                              disabled={Boolean(choiceFeedback) || submittingReview}
-                              className={`rounded-2xl border px-4 py-3 text-left font-bold transition ${
-                                choiceFeedback
-                                  ? isCorrect
-                                    ? 'border-emerald-300/20 bg-emerald-400/10 text-emerald-100'
-                                    : isSelected
-                                      ? 'border-rose-300/20 bg-rose-400/10 text-rose-100'
-                                      : 'border-white/10 bg-white/[0.03] text-slate-500'
-                                  : 'border-white/10 bg-white/[0.03] text-slate-100 hover:border-cyan-300/20 hover:bg-white/[0.08]'
-                              }`}
-                            >
-                              {option}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    {choiceFeedback ? (
-                      <div className="space-y-3">
-                        <div className={`rounded-2xl p-4 text-sm font-bold ${choiceFeedback.correct ? 'bg-emerald-400/10 text-emerald-100' : 'bg-rose-400/10 text-rose-100'}`}>
-                          {choiceFeedback.correct
-                            ? '回答正确，这张卡可以进入更深一层练习。'
-                            : `这题答错了，正确释义是：${activeStudyCard.answer || '暂无答案'}`}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleStudyDecision(choiceFeedback.correct)}
-                          disabled={submittingReview}
-                          className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          继续下一题
-                        </button>
-                      </div>
-                    ) : null}
-                  </>
-                ) : null}
-                {activePracticeKind === 'spelling' ? (
-                  <>
-                    <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6">
-                      <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Spelling Drill</p>
-                      <h3 className="mt-4 text-2xl font-black text-white">{activeStudyCard.answer || '暂无释义'}</h3>
-                      <p className="mt-3 text-sm leading-7 text-slate-300">
-                        根据释义和例句拼出英文单词。
-                        {activeStudyCard.example ? ` 例句: ${activeStudyCard.example}` : ''}
-                      </p>
-                      <input
-                        value={spellingInput}
-                        onChange={(event) => setSpellingInput(event.target.value)}
-                        placeholder="输入英文单词"
-                        className="mt-5 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-base font-bold text-white outline-none transition focus:border-cyan-300/30"
-                      />
-                    </div>
-                    {!spellingFeedback ? (
-                      <button
-                        type="button"
-                        onClick={handleSpellingCheck}
-                        disabled={!spellingInput.trim() || submittingReview}
-                        className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        检查拼写
-                      </button>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className={`rounded-2xl p-4 text-sm font-bold ${spellingFeedback.correct ? 'bg-emerald-400/10 text-emerald-100' : 'bg-amber-400/10 text-amber-100'}`}>
-                          {spellingFeedback.correct
-                            ? '拼写正确，继续保持。'
-                            : `拼写不对，正确答案是：${activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}`}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleStudyDecision(spellingFeedback.correct)}
-                          disabled={submittingReview}
-                          className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          继续下一题
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : null}
-                {activePracticeKind === 'cloze' ? (
-                  <>
-                    <div className="rounded-[2rem] border border-white/10 bg-white/[0.05] p-6">
-                      <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-200">Cloze Drill</p>
-                      <h3 className="mt-4 text-2xl font-black text-white">把空缺单词补完整</h3>
-                      <p className="mt-3 text-sm leading-7 text-slate-300">
-                        {buildClozeText({
-                          sentence: activeStudyCard.example || '',
-                          word: activeStudyCard.vocabularyWord || activeStudyCard.prompt || '',
-                        }) || '当前卡片暂无可挖空的例句，先根据词义回忆单词。'}
-                      </p>
-                      <p className="mt-3 text-sm text-slate-400">提示释义: {activeStudyCard.answer || '暂无释义'}</p>
-                      <input
-                        value={spellingInput}
-                        onChange={(event) => setSpellingInput(event.target.value)}
-                        placeholder="输入缺失的英文单词"
-                        className="mt-5 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-base font-bold text-white outline-none transition focus:border-cyan-300/30"
-                      />
-                    </div>
-                    {!spellingFeedback ? (
-                      <button
-                        type="button"
-                        onClick={handleSpellingCheck}
-                        disabled={!spellingInput.trim() || submittingReview}
-                        className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        检查填空
-                      </button>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className={`rounded-2xl p-4 text-sm font-bold ${spellingFeedback.correct ? 'bg-emerald-400/10 text-emerald-100' : 'bg-amber-400/10 text-amber-100'}`}>
-                          {spellingFeedback.correct
-                            ? '填空正确，说明你已经能把单词放回语境。'
-                            : `填空不对，正确答案是：${activeStudyCard.vocabularyWord || activeStudyCard.prompt || activeStudyCard.id}`}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleStudyDecision(spellingFeedback.correct)}
-                          disabled={submittingReview}
-                          className="w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          继续下一题
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : null}
+                <p className="mt-4 text-sm leading-7 text-emerald-100/90">{completionSummary.nextActionLabel}</p>
               </div>
             ) : null}
           </div>
@@ -1109,7 +1167,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
 
       {!loading && !error && mode === 'review' && reviewPage ? (
         <div className="space-y-6">
-          <div className="signal-ring glass-panel relative overflow-hidden rounded-[2.6rem] p-8 sm:p-10">
+          <div className="premium-panel relative overflow-hidden rounded-[2.7rem] p-8 sm:p-10">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(99,102,241,0.18),transparent_32%)]" />
             <div className="relative">
               <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Review Queue</p>
@@ -1141,7 +1199,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
           {reviewPage.cards.length > 0 ? (
             <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
               <div className="space-y-6">
-                <div className="signal-ring glass-panel rounded-[2.4rem] p-6">
+                <div className="premium-panel rounded-[2.4rem] p-6">
                   <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Deck Signals</p>
                   <div className="mt-5 space-y-3">
                     {reviewPage.deckSignals.map((signal, index) => {
@@ -1179,7 +1237,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                     })}
                   </div>
                 </div>
-                <div className="signal-ring glass-panel rounded-[2.4rem] p-6">
+                <div className="premium-panel rounded-[2.4rem] p-6">
                   <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Quick Command</p>
                   <p className="mt-4 text-2xl font-black text-white">优先清主战线，再把其余到期卡逐张扫掉。</p>
                   <p className="mt-3 text-sm leading-7 text-slate-400">
@@ -1211,7 +1269,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                 {reviewPage.cards.map((card, index) => {
                   const presentation = getDeckPresentation(card.deckId);
                   return (
-                    <div key={card.id} className="signal-ring glass-panel rounded-[2rem] p-5">
+                    <div key={card.id} className="premium-panel rounded-[2rem] p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: presentation.primaryColor }}>
@@ -1246,7 +1304,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
               </div>
             </div>
           ) : (
-            <div className="signal-ring glass-panel rounded-[2.4rem] p-8 text-center">
+            <div className="premium-panel rounded-[2.4rem] p-8 text-center">
               <p className="text-xs font-black uppercase tracking-[0.3em] text-emerald-200">Queue Clear</p>
               <h3 className="mt-4 text-3xl font-black text-white">今天的待复习队列已经清空</h3>
               <p className="mt-4 text-sm leading-7 text-slate-400">继续去课程库推进新单元，或者回到学习页制造新的复习记录。</p>
@@ -1257,7 +1315,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
 
       {!loading && !error && mode === 'mistakes' && mistakesPage ? (
         <div className="space-y-6">
-          <div className="signal-ring glass-panel relative overflow-hidden rounded-[2.6rem] p-8 sm:p-10">
+          <div className="premium-panel relative overflow-hidden rounded-[2.7rem] p-8 sm:p-10">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.16),transparent_30%),radial-gradient(circle_at_80%_20%,rgba(249,115,22,0.14),transparent_28%)]" />
             <div className="relative">
               <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Mistake Vault</p>
@@ -1286,7 +1344,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
           </div>
           {mistakesPage.cards.length > 0 ? (
             <div className="grid gap-6 xl:grid-cols-2">
-              <div className="signal-ring glass-panel rounded-[2.4rem] p-6">
+              <div className="premium-panel rounded-[2.4rem] p-6">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.3em] text-rose-200">High Risk Zone</p>
@@ -1356,7 +1414,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
                   ) : null}
                 </div>
               </div>
-              <div className="signal-ring glass-panel rounded-[2.4rem] p-6">
+              <div className="premium-panel rounded-[2.4rem] p-6">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">Watch List</p>
@@ -1409,7 +1467,7 @@ export default function RebuildWorkspace({ mode }: { mode: WorkspaceMode }) {
               </div>
             </div>
           ) : (
-            <div className="signal-ring glass-panel rounded-[2.4rem] p-8 text-center">
+            <div className="premium-panel rounded-[2.4rem] p-8 text-center">
               <p className="text-xs font-black uppercase tracking-[0.3em] text-emerald-200">Vault Clear</p>
               <h3 className="mt-4 text-3xl font-black text-white">错词本暂时为空</h3>
               <p className="mt-4 text-sm leading-7 text-slate-400">继续学习和复习，系统会在你真正出错时自动把词拉进这里。</p>

@@ -151,6 +151,7 @@ export function buildStudyMissionSummary({
 
   return {
     missionTitle: mode === 'REVIEW' ? '复习攻坚任务' : '新词推进任务',
+    stageLabel: mode === 'REVIEW' ? '高压巩固阶段' : '新词建立阶段',
     progressLabel: `已完成 ${completedCount} / ${totalCards} 张`,
     remainingLabel:
       mode === 'REVIEW'

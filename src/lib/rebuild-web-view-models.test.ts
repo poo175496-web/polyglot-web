@@ -24,6 +24,14 @@ describe('rebuild web view models', () => {
     });
 
     expect(model.hero.title).toBe('高考高频词汇全覆盖');
+    expect(model.hero.primaryAction).toEqual({
+      label: '继续主路线',
+      href: '/rebuild/study/gaokao',
+    });
+    expect(model.hero.secondaryAction).toEqual({
+      label: '查看复习总控',
+      href: '/rebuild/review',
+    });
     expect(model.stats.dueReviews).toBe(32);
     expect(model.stats.todayReviewedLabel).toBe('今日已练 18 题');
     expect(model.stats.accuracyLabel).toBe('正确率 87%');

@@ -71,6 +71,7 @@ describe('rebuild study interactions', () => {
       })
     ).toEqual({
       missionTitle: '复习攻坚任务',
+      stageLabel: '高压巩固阶段',
       progressLabel: '已完成 2 / 4 张',
       remainingLabel: '还差 2 张完成本轮复习',
       accuracyLabel: '当前命中率 50%',
@@ -88,6 +89,7 @@ describe('rebuild study interactions', () => {
       })
     ).toEqual({
       missionTitle: '新词推进任务',
+      stageLabel: '新词建立阶段',
       progressLabel: '已完成 0 / 5 张',
       remainingLabel: '还差 5 张推进当前单元',
       accuracyLabel: '当前命中率 暂无',
