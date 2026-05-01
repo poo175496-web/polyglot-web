@@ -1,6 +1,7 @@
 import type { ReviewRating, StudyMode } from '../../../api/src/services/study-service';
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+const DEFAULT_REBUILD_API_BASE_URL = 'https://polyglot-web-g2pa.onrender.com';
 
 export interface RebuildDeckSummary {
   id: string;
@@ -77,13 +78,13 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export function createRebuildApiClient({
-  baseUrl = 'http://localhost:3010',
+  baseUrl = DEFAULT_REBUILD_API_BASE_URL,
   fetcher = fetch,
 }: {
   baseUrl?: string;
   fetcher?: Fetcher;
 }) {
-  const normalizedBaseUrl = trimBaseUrl(baseUrl);
+  const normalizedBaseUrl = trimBaseUrl(baseUrl || DEFAULT_REBUILD_API_BASE_URL);
 
   async function requestJson<T>(url: string, init?: RequestInit) {
     const response = await fetcher(url, init);

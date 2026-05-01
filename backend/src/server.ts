@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import sqlite3 from 'sqlite3';
+import { resolve } from 'node:path';
 
 import {
   createSessionToken,
@@ -11,12 +12,18 @@ import {
   verifyPassword,
   verifySessionToken,
 } from './auth.js';
+import { createHttpHandlers } from '../../apps/api/src/http/handlers.ts';
+import { createApiRouter } from '../../apps/api/src/http/router.ts';
+import { createFileStudyRepository } from '../../apps/api/src/repositories/file-study-repository.ts';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 const adminEmail = normalizeEmail(process.env.ADMIN_EMAIL || '');
 const seedUserEmail = 'test@family.com';
 const seedUserPassword = 'family123';
+const rebuildRepository = createFileStudyRepository(resolve(process.cwd(), '.runtime/rebuild-study-state.json'));
+const rebuildRouter = createApiRouter({ repository: rebuildRepository });
+const rebuildHandlers = createHttpHandlers({ router: rebuildRouter });
 
 interface ProgressRow {
   course_id: string;
@@ -59,6 +66,70 @@ interface AuthenticatedRequest extends Request {
 
 app.use(cors());
 app.use(express.json());
+
+app.get('/v1/health', async (_req, res) => {
+  const response = await rebuildHandlers.health();
+  res.status(response.status).json(response.body);
+});
+
+app.get('/v1/decks', async (req, res) => {
+  const response = await rebuildHandlers.decksList({
+    query: { userId: String(req.query.userId || 'guest') },
+  });
+  res.status(response.status).json(response.body);
+});
+
+app.get('/v1/decks/:deckId', async (req, res) => {
+  const response = await rebuildHandlers.deckDetail({
+    params: { deckId: req.params.deckId },
+    query: { userId: String(req.query.userId || 'guest') },
+  });
+  res.status(response.status).json(response.body);
+});
+
+app.post('/v1/study-sessions', async (req, res) => {
+  const response = await rebuildHandlers.studySessionStart({
+    body: {
+      userId: String(req.body.userId || 'guest'),
+      deckId: String(req.body.deckId || ''),
+      mode: req.body.mode === 'REVIEW' || req.body.mode === 'TEST' ? req.body.mode : 'LEARN',
+      cardIds: Array.isArray(req.body.cardIds) ? req.body.cardIds.map((cardId) => String(cardId)) : undefined,
+    },
+  });
+  res.status(response.status).json(response.body);
+});
+
+app.post('/v1/study-sessions/:sessionId/reviews', async (req, res) => {
+  const response = await rebuildHandlers.studySessionSubmit({
+    params: { sessionId: req.params.sessionId },
+    body: {
+      userId: String(req.body.userId || 'guest'),
+      answers: Array.isArray(req.body.answers) ? req.body.answers : [],
+    },
+  });
+  res.status(response.status).json(response.body);
+});
+
+app.get('/v1/progress/overview', async (req, res) => {
+  const response = await rebuildHandlers.progressOverview({
+    query: { userId: String(req.query.userId || 'guest') },
+  });
+  res.status(response.status).json(response.body);
+});
+
+app.get('/v1/reviews/due', async (req, res) => {
+  const response = await rebuildHandlers.reviewsDue({
+    query: { userId: String(req.query.userId || 'guest') },
+  });
+  res.status(response.status).json(response.body);
+});
+
+app.get('/v1/mistakes', async (req, res) => {
+  const response = await rebuildHandlers.mistakesList({
+    query: { userId: String(req.query.userId || 'guest') },
+  });
+  res.status(response.status).json(response.body);
+});
 
 const db = new sqlite3.Database('./database.sqlite', (err) => {
   if (err) {
@@ -401,7 +472,13 @@ app.get('/api/courses', (_req, res) => {
   ]);
 });
 
-app.listen(port, () => {
-  console.log(`🚀 后台服务已启动: http://localhost:${port}`);
-  console.log(`💡 测试账号: ${seedUserEmail} / ${seedUserPassword}`);
-});
+export function createBackendApp() {
+  return app;
+}
+
+if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+  app.listen(port, () => {
+    console.log(`🚀 后台服务已启动: http://localhost:${port}`);
+    console.log(`💡 测试账号: ${seedUserEmail} / ${seedUserPassword}`);
+  });
+}

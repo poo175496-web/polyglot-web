@@ -34,7 +34,7 @@ import {
 import { useStore } from '@/store/useStore';
 
 const api = createRebuildApiClient({
-  baseUrl: import.meta.env.VITE_REBUILD_API_BASE_URL || 'http://localhost:3010',
+  baseUrl: import.meta.env.VITE_REBUILD_API_BASE_URL || '',
 });
 
 type WorkspaceMode = 'dashboard' | 'decks' | 'deck-detail' | 'study' | 'review' | 'mistakes';

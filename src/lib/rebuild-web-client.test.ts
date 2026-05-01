@@ -3,6 +3,26 @@ import { describe, expect, it } from 'vitest';
 import { createRebuildApiClient } from '../../apps/web/src/api/client';
 
 describe('rebuild web api client', () => {
+  it('falls back to the deployed render backend when rebuild env is missing', async () => {
+    const requests: string[] = [];
+    const client = createRebuildApiClient({
+      baseUrl: '',
+      fetcher: async (url) => {
+        requests.push(String(url));
+        return {
+          ok: true,
+          json: async () => ([]),
+        } as Response;
+      },
+    });
+
+    await client.getDecks('user-1');
+
+    expect(requests).toEqual([
+      'https://polyglot-web-g2pa.onrender.com/v1/decks?userId=user-1',
+    ]);
+  });
+
   it('calls the new deck and overview endpoints with the expected query parameters', async () => {
     const requests: string[] = [];
     const client = createRebuildApiClient({
