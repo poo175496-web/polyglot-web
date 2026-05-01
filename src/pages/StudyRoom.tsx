@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Volume2, Mic, RotateCcw, Search, Lightbulb, BookOpen, Lock, PartyPopper } from 'lucide-react';
 import { vocabularyData, WordItem } from '../data/vocabulary';
 import { useStore } from '../store/useStore';
+import { getSessionStateForUnlockedUnit } from '../lib/study-session';
 
 interface SpeechRecognitionResultEvent {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
@@ -27,6 +28,29 @@ interface BrowserSpeechRecognition {
 interface BrowserSpeechRecognitionConstructor {
   new (): BrowserSpeechRecognition;
 }
+
+const courseProfiles: Record<string, { title: string; subtitle: string; badge: string }> = {
+  zhongkao: {
+    title: '中考核心词汇冲刺',
+    subtitle: '基础词汇 + 分单元闯关 + 听写验收',
+    badge: '中考',
+  },
+  gaokao: {
+    title: '高考高频词汇全覆盖',
+    subtitle: '阅读高频 + 写作表达 + 解锁式推进',
+    badge: '高考',
+  },
+  ielts: {
+    title: '雅思核心学术词库',
+    subtitle: '学术语境 + 阅读定位 + 写作提分',
+    badge: 'IELTS',
+  },
+  toefl: {
+    title: '托福学术词汇精讲',
+    subtitle: '课堂场景 + 学术阅读 + 长线进阶',
+    badge: 'TOEFL',
+  },
+};
 
 export default function StudyRoom() {
   const { courseId } = useParams();
@@ -69,6 +93,27 @@ export default function StudyRoom() {
     }
     return res;
   }, [fullVocabulary]);
+
+  const currentCourseProfile = courseProfiles[courseId || ''] || courseProfiles.zhongkao;
+  const completedUnits = Math.min(unlockedUnit + 1, groups.length || 1);
+  const completionRate = groups.length > 0 ? Math.round((completedUnits / groups.length) * 100) : 0;
+
+  useEffect(() => {
+    const nextState = getSessionStateForUnlockedUnit({
+      studyMode,
+      activeGroupId,
+      unlockedUnit,
+      hasSearchTerm: Boolean(searchTerm.trim()),
+    });
+
+    if (nextState.studyMode !== studyMode) {
+      setStudyMode(nextState.studyMode);
+    }
+
+    if (nextState.activeGroupId !== activeGroupId) {
+      setActiveGroupId(nextState.activeGroupId);
+    }
+  }, [activeGroupId, searchTerm, studyMode, unlockedUnit, user?.id]);
 
   // 3. 支持全局搜索
   const searchResults = useMemo(() => {
@@ -307,8 +352,34 @@ export default function StudyRoom() {
 
         <div className="max-w-5xl w-full mx-auto pb-12">
           <div className="mb-8">
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">选择学习单元</h1>
-            <p className="text-gray-500 mt-2 font-medium">每组 {WORDS_PER_GROUP} 个词汇，学完并完成听写测验后即可解锁下一关。</p>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <span className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black tracking-widest uppercase">
+                {currentCourseProfile.badge}
+              </span>
+              <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">
+                {fullVocabulary.length} 词 / {groups.length} Unit
+              </span>
+            </div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{currentCourseProfile.title}</h1>
+            <p className="text-gray-500 mt-2 font-medium">{currentCourseProfile.subtitle}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+              <p className="text-sm font-bold text-gray-500 mb-2">当前进度</p>
+              <p className="text-3xl font-black text-gray-900">{completionRate}%</p>
+              <p className="text-sm text-gray-400 mt-1">已解锁 {completedUnits} / {groups.length} 单元</p>
+            </div>
+            <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+              <p className="text-sm font-bold text-gray-500 mb-2">学习方式</p>
+              <p className="text-lg font-black text-gray-900">翻卡 + 跟读 + 听写</p>
+              <p className="text-sm text-gray-400 mt-1">每单元 {WORDS_PER_GROUP} 词，通关后解锁下一关</p>
+            </div>
+            <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+              <p className="text-sm font-bold text-gray-500 mb-2">当前账号</p>
+              <p className="text-lg font-black text-gray-900 truncate">{user?.name || '未登录'}</p>
+              <p className="text-sm text-gray-400 mt-1">切换账号后会按该账号解锁进度显示</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -348,7 +419,7 @@ export default function StudyRoom() {
                     </span>
                   </div>
                   <h3 className={`text-xl font-bold mb-2 ${isLocked ? 'text-gray-400' : 'text-gray-900'}`}>Unit {idx + 1}</h3>
-                  <div className={`flex items-center gap-2 text-sm font-medium ${isLocked ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <div className={`flex items-center gap-2 text-sm font-medium mb-3 ${isLocked ? 'text-gray-400' : 'text-gray-500'}`}>
                     <BookOpen className={`w-4 h-4 ${isLocked ? 'text-gray-300' : 'text-indigo-400'}`} />
                     <span>
                       <strong className={isLocked ? 'text-gray-400' : 'text-gray-900'}>{group[0].word.charAt(0).toUpperCase()}</strong>
@@ -356,6 +427,11 @@ export default function StudyRoom() {
                       {group[group.length-1].word.slice(1)}
                     </span>
                   </div>
+                  <p className={`text-sm leading-6 ${isLocked ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {isLocked
+                      ? '完成上一单元并同步成功后解锁。'
+                      : `预览：${group.slice(0, 3).map((item) => item.word).join(' · ')}`}
+                  </p>
                 </motion.div>
               );
             })}
@@ -499,6 +575,11 @@ export default function StudyRoom() {
         )}
 
         <div className="flex items-center gap-4 ml-auto">
+          {!searchTerm && activeGroupId !== null && (
+            <div className="px-4 py-2 rounded-full bg-white border border-gray-100 text-sm font-bold text-gray-600 shadow-sm">
+              {currentCourseProfile.badge} · Unit {activeGroupId + 1}
+            </div>
+          )}
           <div className="text-sm font-bold text-gray-500">
             进度: {activeCards.length > 0 ? currentCard + 1 : 0} / {activeCards.length}
           </div>
@@ -519,13 +600,32 @@ export default function StudyRoom() {
           </div>
         ) : (
           <>
+            <div className="w-full max-w-lg rounded-3xl border border-gray-100 bg-white/80 backdrop-blur px-5 py-4 mb-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black tracking-[0.2em] text-indigo-500 uppercase">
+                    {searchTerm ? 'Search Mode' : currentCourseProfile.badge}
+                  </p>
+                  <h3 className="text-lg font-black text-gray-900 mt-1">
+                    {searchTerm ? `搜索到 ${activeCards.length} 个结果` : currentCourseProfile.title}
+                  </h3>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-gray-400">当前卡片</p>
+                  <p className="text-xl font-black text-gray-900">{currentCard + 1}</p>
+                </div>
+              </div>
+            </div>
+
             <div className="w-full aspect-[4/3] perspective-1000 relative max-w-lg mx-auto">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentCard}
                   className="w-full h-full relative preserve-3d cursor-pointer"
-                  animate={{ rotateY: flipped ? 180 : 0 }}
-                  transition={{ duration: 0.3, type: 'spring', stiffness: 400, damping: 25 }}
+                  initial={{ opacity: 0, scale: 0.96, y: 16 }}
+                  animate={{ opacity: 1, scale: 1, y: 0, rotateY: flipped ? 180 : 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: -16 }}
+                  transition={{ duration: 0.38, type: 'spring', stiffness: 360, damping: 26 }}
                   onClick={handleFlip}
                 >
                   {/* Front */}
@@ -540,9 +640,14 @@ export default function StudyRoom() {
                     <h2 className="text-5xl sm:text-6xl font-black text-gray-900 mb-6 tracking-tight font-serif">
                       {activeCards[currentCard].word}
                     </h2>
-                    <p className="text-2xl text-indigo-400 font-mono tracking-widest bg-indigo-50 px-6 py-2 rounded-2xl">
-                      {activeCards[currentCard].phonetic}
-                    </p>
+                    <div className="flex flex-col items-center gap-3">
+                      <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">
+                        发音提示
+                      </span>
+                      <p className="text-2xl text-indigo-400 font-mono tracking-widest bg-indigo-50 px-6 py-2 rounded-2xl">
+                        {activeCards[currentCard].phonetic}
+                      </p>
+                    </div>
                     <div className="absolute bottom-8 left-0 right-0 text-gray-400 font-bold flex items-center justify-center gap-2 animate-pulse">
                       <RotateCcw className="w-5 h-5" />
                       点击卡片或按空格键翻转
@@ -567,10 +672,19 @@ export default function StudyRoom() {
                       </p>
                     </div>
 
+                    <div className="mb-5 z-10">
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-bold tracking-wide text-indigo-100">
+                        {activeCards[currentCard].theme || '高频考纲词'}
+                      </span>
+                    </div>
+
                     <div className="w-24 h-1 bg-white/20 rounded-full mb-8 z-10" />
-                    <p className="text-xl sm:text-2xl text-indigo-100 font-medium italic leading-relaxed z-10">
-                      "{activeCards[currentCard].example}"
-                    </p>
+                    <div className="z-10">
+                      <p className="text-xs uppercase tracking-[0.3em] text-indigo-200 font-bold mb-3">Example</p>
+                      <p className="text-xl sm:text-2xl text-indigo-100 font-medium italic leading-relaxed">
+                        "{activeCards[currentCard].example}"
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               </AnimatePresence>

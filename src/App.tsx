@@ -7,6 +7,7 @@ import CourseList from "@/pages/CourseList";
 import StudyRoom from "@/pages/StudyRoom";
 import Community from "@/pages/Community";
 import AdminPage from "@/pages/AdminPage";
+import RebuildWorkspace from "@/pages/RebuildWorkspace";
 
 export default function App() {
   return (
@@ -53,6 +54,54 @@ export default function App() {
           element={
             <AppLayout requireAdmin>
               <AdminPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/rebuild/dashboard"
+          element={
+            <AppLayout requireAuth={false}>
+              <RebuildWorkspace mode="dashboard" />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/rebuild/decks"
+          element={
+            <AppLayout requireAuth={false}>
+              <RebuildWorkspace mode="decks" />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/rebuild/decks/:deckId"
+          element={
+            <AppLayout requireAuth={false}>
+              <RebuildWorkspace mode="deck-detail" />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/rebuild/study/:deckId"
+          element={
+            <AppLayout requireAuth={false}>
+              <RebuildWorkspace mode="study" />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/rebuild/review"
+          element={
+            <AppLayout requireAuth={false}>
+              <RebuildWorkspace mode="review" />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/rebuild/mistakes"
+          element={
+            <AppLayout requireAuth={false}>
+              <RebuildWorkspace mode="mistakes" />
             </AppLayout>
           }
         />

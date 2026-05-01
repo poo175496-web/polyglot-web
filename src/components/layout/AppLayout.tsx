@@ -7,11 +7,12 @@ import { getRouteAccessDecision } from '@/lib/access';
 interface AppLayoutProps {
   children: ReactNode;
   requireAdmin?: boolean;
+  requireAuth?: boolean;
 }
 
-export default function AppLayout({ children, requireAdmin = false }: AppLayoutProps) {
+export default function AppLayout({ children, requireAdmin = false, requireAuth = true }: AppLayoutProps) {
   const user = useStore((state) => state.user);
-  const decision = getRouteAccessDecision(user, { requireAuth: true, requireAdmin });
+  const decision = getRouteAccessDecision(user, { requireAuth, requireAdmin });
 
   if (!decision.allowed) {
     return <Navigate to={decision.redirectTo} replace />;

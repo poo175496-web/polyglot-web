@@ -1,27 +1,17 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { 
-  LayoutDashboard, 
-  Library, 
-  Users, 
   LogOut,
   Globe
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { buildSidebarNavItems } from './navigation';
 
 export default function Sidebar() {
   const location = useLocation();
   const { user, logout } = useStore();
 
-  const navItems = [
-    { name: '控制台', path: '/dashboard', icon: LayoutDashboard },
-    { name: '课程大厅', path: '/courses', icon: Library },
-    { name: '学习社区', path: '/community', icon: Users },
-  ];
-  const adminItems = user?.role === 'admin'
-    ? [{ name: '后台管理', path: '/admin', icon: LayoutDashboard }]
-    : [];
-  const allNavItems = [...navItems, ...adminItems];
+  const allNavItems = buildSidebarNavItems(user?.role);
 
   return (
     <aside className="w-64 h-screen bg-white border-r border-gray-100 flex flex-col justify-between p-4 fixed left-0 top-0 z-40">

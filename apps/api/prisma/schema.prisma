@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  passwordHash    String
+  displayName     String
+  role            UserRole       @default(LEARNER)
+  timezone        String         @default("Asia/Shanghai")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deckProgresses  DeckProgress[]
+  studySessions   StudySession[]
+  reviewLogs      ReviewLog[]
+}
+
+model Deck {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  examType        ExamType
+  description     String
+  isPublished     Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  units           DeckUnit[]
+  cards           LearningCard[]
+  progresses      DeckProgress[]
+}
+
+model DeckUnit {
+  id              String         @id @default(cuid())
+  deckId          String
+  index           Int
+  title           String
+  unlockRule      UnlockRule     @default(SEQUENTIAL)
+  deck            Deck           @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@unique([deckId, index])
+}
+
+model VocabularyItem {
+  id              String         @id @default(cuid())
+  lemma           String
+  phonetic        String?
+  meaning         String
+  root            String?
+  example         String?
+  theme           String?
+  levelTag        String?
+  audioKey        String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  cards           LearningCard[]
+}
+
+model LearningCard {
+  id                String          @id @default(cuid())
+  deckId            String
+  unitId            String
+  vocabularyItemId  String
+  templateType      CardTemplateType
+  prompt            String
+  answer            String
+  deck              Deck            @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  vocabularyItem    VocabularyItem  @relation(fields: [vocabularyItemId], references: [id], onDelete: Cascade)
+}
+
+model DeckProgress {
+  id                String         @id @default(cuid())
+  userId            String
+  deckId            String
+  unlockedUnitIndex Int            @default(0)
+  masteredCardCount Int            @default(0)
+  lastStudiedAt     DateTime?
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deck              Deck           @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deckId])
+}
+
+model StudySession {
+  id                String             @id @default(cuid())
+  userId            String
+  deckId            String
+  mode              StudyMode
+  status            StudySessionStatus @default(ACTIVE)
+  startedAt         DateTime           @default(now())
+  finishedAt        DateTime?
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewLogs        ReviewLog[]
+}
+
+model ReviewLog {
+  id                String         @id @default(cuid())
+  userId            String
+  sessionId         String
+  cardId            String
+  rating            ReviewRating
+  isCorrect         Boolean
+  elapsedMs         Int
+  reviewedAt        DateTime       @default(now())
+  nextDueAt         DateTime?
+  stabilityScore    Float?
+  difficultyScore   Float?
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session           StudySession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  LEARNER
+  ADMIN
+}
+
+enum ExamType {
+  ZHONGKAO
+  GAOKAO
+  IELTS
+  TOEFL
+}
+
+enum UnlockRule {
+  SEQUENTIAL
+  SCORE_GATE
+}
+
+enum CardTemplateType {
+  WORD_TO_MEANING
+  MEANING_TO_WORD
+  SPELLING
+  LISTENING
+  EXAMPLE_CLOZE
+}
+
+enum StudyMode {
+  LEARN
+  REVIEW
+  TEST
+}
+
+enum StudySessionStatus {
+  ACTIVE
+  FINISHED
+  ABANDONED
+}
+
+enum ReviewRating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
